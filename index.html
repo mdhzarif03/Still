@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-phase="focus">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Still</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="config.js"></script>
+<meta name="theme-color" content="#060811">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script>
+  // Apply saved theme before first paint (no flash)
+  (function () {
+    var t = null;
+    try { t = JSON.parse(localStorage.getItem('still.theme')); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+/* ───────────── Tokens ───────────── */
+@property --c1 { syntax: '<color>'; inherits: true; initial-value: #1d3fa8; }
+@property --c2 { syntax: '<color>'; inherits: true; initial-value: #5b2a9c; }
+@property --c3 { syntax: '<color>'; inherits: true; initial-value: #0e6f8f; }
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #8fb0ff; }
+@property --tint { syntax: '<color>'; inherits: true; initial-value: rgba(0,0,0,0); }
+
+:root {
+  color-scheme: dark;
+  --bg: #060811;
+  --fg: #e9edf5;
+  --mute: rgba(233, 237, 245, .6);
+  --faint: rgba(233, 237, 245, .15);
+  --glass: rgba(16, 20, 36, .5);
+  --glass-strong: rgba(11, 15, 28, .82);
+  --edge: rgba(255, 255, 255, .09);
+  --shadow: 0 24px 60px -24px rgba(0, 0, 0, .8);
+  --orb-o: .6;
+  --grain-o: .08;
+  --serif: 'Bodoni Moda', 'Didot', 'Bodoni 72', Georgia, serif;
+  --sans: 'Jost', 'Futura', 'Century Gothic', 'Avenir Next', system-ui, sans-serif;
+  --c1: #1d3fa8; --c2: #5b2a9c; --c3: #0e6f8f; --accent: #8fb0ff;
+  transition: --c1 2.4s ease, --c2 2.4s ease, --c3 2.4s ease, --accent 1.4s ease, --tint 2.4s ease;
+}
+:root[data-theme=light] {
+  color-scheme: light;
+  --bg: #e8edf1;
+  --fg: #0e131a;
+  --mute: rgba(14, 19, 26, .62);
+  --faint: rgba(14, 19, 26, .13);
+  --glass: rgba(255, 255, 255, .5);
+  --glass-strong: rgba(247, 250, 253, .86);
+  --edge: rgba(255, 255, 255, .75);
+  --shadow: 0 24px 60px -28px rgba(30, 55, 100, .4);
+  --orb-o: .9;
+  --grain-o: .05;
+}
+/* Phase palettes: focus = deep blue, short break = sea glass, long break = dusk violet */
+:root[data-theme=dark][data-phase=focus]  { --c1: #1d3fa8; --c2: #5b2a9c; --c3: #0e6f8f; --accent: #93b4ff; }
+:root[data-theme=dark][data-phase=short]  { --c1: #0d7a62; --c2: #0e5a86; --c3: #2e6b3f; --accent: #72e3c0; }
+:root[data-theme=dark][data-phase=long]   { --c1: #5a2fb3; --c2: #a03a86; --c3: #1f4fb0; --accent: #c5abff; }
+:root[data-theme=light][data-phase=focus] { --c1: #9fc2ea; --c2: #c9b8ee; --c3: #f3c9b6; --accent: #2447c9; }
+:root[data-theme=light][data-phase=short] { --c1: #a6dcc8; --c2: #c8e9b4; --c3: #9fd0e8; --accent: #0b7d5f; }
+:root[data-theme=light][data-phase=long]  { --c1: #c3b1f0; --c2: #9db8f0; --c3: #efb8d6; --accent: #6a3fd0; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-weight: 400;
+  overflow-x: hidden;
+  transition: background-color .6s ease;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+body.idle { cursor: none; }
+
+/* ───────────── Living background ───────────── */
+.bg { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.orb { position: absolute; border-radius: 50%; opacity: var(--orb-o); will-change: transform; }
+.o1 { width: 72vmax; height: 72vmax; left: -22vmax; top: -28vmax;
+      background: radial-gradient(closest-side, var(--c1), transparent); animation: d1 54s ease-in-out infinite alternate; }
+.o2 { width: 66vmax; height: 66vmax; right: -24vmax; bottom: -30vmax;
+      background: radial-gradient(closest-side, var(--c2), transparent); animation: d2 68s ease-in-out infinite alternate; }
+.o3 { width: 54vmax; height: 54vmax; left: 28vw; top: 30vh;
+      background: radial-gradient(closest-side, var(--c3), transparent); opacity: calc(var(--orb-o) * .75); animation: d3 82s ease-in-out infinite alternate; }
+.o4 { width: 62vmax; height: 62vmax; left: 6vw; bottom: -34vmax;
+      background: radial-gradient(closest-side, var(--tint), transparent); opacity: var(--tint-o, 0); transition: opacity 2.4s ease; animation: d2 90s ease-in-out infinite alternate-reverse; }
+@keyframes d1 { to { transform: translate3d(26vw, 20vh, 0) scale(1.18); } }
+@keyframes d2 { to { transform: translate3d(-28vw, -16vh, 0) scale(1.12); } }
+@keyframes d3 { to { transform: translate3d(-24vw, -22vh, 0) scale(.84); } }
+.grain {
+  position: absolute; inset: 0; opacity: var(--grain-o);
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, color-mix(in srgb, var(--bg) 75%, transparent) 100%); }
+
+/* ───────────── Top bar ───────────── */
+.top {
+  position: fixed; z-index: 5; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 0 22px;
+  transition: opacity .9s ease;
+}
+.left { display: flex; align-items: center; gap: 14px; }
+.brand { font-family: var(--serif); font-style: italic; font-size: 1.4rem; letter-spacing: .01em; }
+.awake { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; color: var(--mute); background: none; border: 0; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.awake i { width: 6px; height: 6px; border-radius: 50%; background: var(--mute); }
+.awake[data-s=on] i { background: var(--accent); animation: pulse 3.2s ease-out infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 70%, 100% { box-shadow: 0 0 0 8px transparent; } }
+.right { display: flex; align-items: center; gap: 4px; }
+.ibtn {
+  min-width: 40px; height: 40px; padding: 0 10px; border-radius: 13px; border: 0; background: none; color: var(--mute);
+  display: inline-grid; place-items: center; cursor: pointer; transition: color .2s, background .2s;
+}
+.ibtn:hover { color: var(--fg); background: var(--glass); }
+.ibtn.txt { font-size: .9rem; font-weight: 500; letter-spacing: .02em; }
+.ibtn svg { display: block; }
+
+/* ───────────── Stage ───────────── */
+.stage {
+  position: relative; z-index: 1; min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(18px, 4vh, 40px); padding: 78px 20px 140px; text-align: center;
+}
+.date { font-size: clamp(1rem, 1.6vw, 1.25rem); font-weight: 300; color: var(--mute); letter-spacing: .05em; }
+.time {
+  font-family: var(--serif); font-weight: 400; line-height: .9; letter-spacing: -.02em;
+  font-size: min(20vw, 31vh); font-variation-settings: 'opsz' 96; user-select: none;
+}
+.digits { position: relative; display: inline-flex; align-items: baseline; justify-content: center; }
+.d { display: inline-block; width: .6em; text-align: center; }
+.d.ghost { opacity: 0; }
+.d.flip { animation: rise .7s cubic-bezier(.2, .7, .2, 1); }
+@keyframes rise { from { opacity: 0; transform: translateY(.06em); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.colon { display: inline-block; width: .3em; text-align: center; transform: translateY(-.07em); animation: breathe 2s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { opacity: .85; } 50% { opacity: .25; } }
+.side {
+  position: absolute; left: calc(100% + .1em); bottom: .17em;
+  display: flex; flex-direction: column; align-items: flex-start; gap: .12em;
+  font-family: var(--sans); font-weight: 300; font-size: .15em; line-height: 1; letter-spacing: .04em; color: var(--mute);
+}
+.side #sec { min-width: 1.6em; }
+
+/* ───────────── Pomodoro ───────────── */
+.pomo { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(16px); transition: opacity .9s ease; }
+.seg button { border: 0; background: none; color: var(--mute); font-size: .9rem; padding: 7px 16px; border-radius: 999px; cursor: pointer; transition: color .2s, background .3s; }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-selected=true] { color: var(--fg); background: color-mix(in srgb, var(--fg) 13%, transparent); }
+.prow { display: flex; align-items: center; gap: clamp(14px, 3vw, 28px); }
+.ptime { font-family: var(--serif); font-size: clamp(2.3rem, 5vw, 3.5rem); min-width: 4.6ch; line-height: 1; font-variation-settings: 'opsz' 60; }
+.pomo.flash .ptime { animation: glow 1.8s ease-out; }
+@keyframes glow { 0% { text-shadow: 0 0 0 transparent; } 30% { text-shadow: 0 0 42px var(--accent); } 100% { text-shadow: 0 0 0 transparent; } }
+.go { width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--fg); color: var(--bg); display: grid; place-items: center; cursor: pointer; transition: transform .25s cubic-bezier(.2, .8, .2, 1), opacity .9s; }
+.go:hover { transform: scale(1.06); }
+.go:active { transform: scale(.96); }
+.go svg { width: 24px; height: 24px; }
+.ghost-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--faint); background: none; color: var(--mute); display: grid; place-items: center; cursor: pointer; transition: color .2s, border-color .2s, opacity .9s; }
+.ghost-btn:hover { color: var(--fg); border-color: var(--mute); }
+.bar { width: min(360px, 72vw); height: 2px; background: var(--faint); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); transition: transform .35s linear; }
+.dots { display: flex; gap: 9px; height: 8px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--mute); transition: background .5s, border-color .5s; }
+.dots i.on { background: var(--accent); border-color: var(--accent); }
+.dots i.now { border-color: var(--accent); animation: breathe 2.4s ease-in-out infinite; }
+
+/* Idle (auto-hides chrome, keeps the time and the timer) */
+body.idle .top, body.idle .seg, body.idle .go, body.idle .ghost-btn, body.idle .np .ctl, body.idle .np .pill { opacity: 0; pointer-events: none; }
+.np { transition: opacity .9s ease; }
+body.idle .np { opacity: .7; }
+
+/* ───────────── Now playing ───────────── */
+.np {
+  position: fixed; z-index: 6; left: 50%; transform: translateX(-50%);
+  bottom: max(20px, env(safe-area-inset-bottom));
+  width: min(580px, calc(100vw - 28px)); border-radius: 24px;
+  background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow: var(--shadow);
+}
+.npv { display: none; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; min-height: 64px; }
+.np[data-state=off] [data-v=off], .np[data-state=idle] [data-v=idle] { display: flex; }
+.np[data-state=playing] [data-v=playing] { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; padding: 9px 12px 15px 9px; position: relative; }
+.npi { color: var(--mute); display: grid; }
+.npt { flex: 1; color: var(--mute); font-size: .95rem; }
+.pill { border: 0; background: var(--fg); color: var(--bg); font-weight: 500; font-size: .88rem; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: opacity .9s, transform .2s; }
+.pill:hover { transform: translateY(-1px); }
+.cover { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--faint); cursor: pointer; box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .6); }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.meta b { font-weight: 500; font-size: .98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta span { color: var(--mute); font-size: .84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl { display: flex; align-items: center; gap: 2px; transition: opacity .9s; }
+.cbtn { width: 38px; height: 38px; border-radius: 50%; border: 0; background: none; color: var(--mute); display: grid; place-items: center; cursor: pointer; transition: color .2s, background .2s; }
+.cbtn:hover { color: var(--fg); background: color-mix(in srgb, var(--fg) 9%, transparent); }
+.cbtn.big { color: var(--bg); background: var(--fg); width: 42px; height: 42px; margin: 0 2px; }
+.cbtn.big:hover { color: var(--bg); background: var(--fg); transform: scale(1.06); }
+.cbtn svg { width: 18px; height: 18px; }
+.prog { position: absolute; left: 16px; right: 16px; bottom: 2px; height: 12px; cursor: pointer; }
+.prog::before { content: ''; position: absolute; left: 0; right: 0; top: 5px; height: 2px; border-radius: 2px; background: var(--faint); }
+.prog i { position: absolute; left: 0; right: 0; top: 5px; height: 2px; border-radius: 2px; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+#vol { width: 72px; margin-right: 6px; accent-color: var(--accent); height: 16px; }
+@media (max-width: 640px) { #vol { display: none; } }
+
+/* ───────────── Library drawer ───────────── */
+.scrim { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .3); opacity: 0; pointer-events: none; transition: opacity .4s; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed; z-index: 21; top: 12px; right: 12px; bottom: 12px; width: min(430px, calc(100vw - 24px));
+  display: flex; flex-direction: column; border-radius: 26px; overflow: hidden;
+  background: var(--glass-strong); border: 1px solid var(--edge); backdrop-filter: blur(30px) saturate(1.3); box-shadow: var(--shadow);
+  transform: translateX(calc(100% + 24px)); transition: transform .55s cubic-bezier(.22, .8, .24, 1);
+}
+.drawer.open { transform: none; }
+.dh { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 12px 6px 20px; }
+.dh h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.5rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variation-settings: 'opsz' 40; }
+.dh .back { margin-left: -12px; }
+.dh-r { display: flex; align-items: center; gap: 4px; }
+.tabs { display: flex; gap: 6px; padding: 4px 20px 0; }
+.tabs button { border: 0; background: none; color: var(--mute); padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: .92rem; }
+.tabs button[aria-selected=true] { color: var(--fg); background: color-mix(in srgb, var(--fg) 12%, transparent); }
+.search { display: flex; align-items: center; gap: 10px; margin: 12px 16px 6px; padding: 0 14px; height: 42px; border-radius: 14px; border: 1px solid var(--faint); color: var(--mute); }
+.search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--fg); font: inherit; font-size: .95rem; }
+.search:focus-within { border-color: var(--accent); }
+.dscroll { flex: 1; overflow-y: auto; padding: 6px 10px 18px; overscroll-behavior: contain; }
+.dscroll::-webkit-scrollbar { width: 8px; }
+.dscroll::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 8px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; cursor: pointer; }
+.row:hover, .row:focus-visible { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.row.on .rt b { color: var(--accent); }
+.th { width: 44px; height: 44px; border-radius: 9px; object-fit: cover; background: var(--faint); flex: none; }
+.rt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-align: left; }
+.rt b { font-weight: 500; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt i { font-style: normal; color: var(--mute); font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dur { color: var(--mute); font-size: .82rem; min-width: 3ch; text-align: right; }
+.rplay { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--fg); color: var(--bg); display: grid; place-items: center; opacity: 0; cursor: pointer; transition: opacity .2s; flex: none; }
+.rplay svg { width: 16px; height: 16px; }
+.row:hover .rplay, .row:focus-within .rplay { opacity: 1; }
+@media (hover: none) { .rplay { opacity: 1; } }
+.eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; }
+.eq s { width: 3px; height: 40%; background: var(--accent); border-radius: 1px; }
+.eq.live s { animation: eq 1s ease-in-out infinite; }
+.eq.live s:nth-child(2) { animation-delay: -.4s; }
+.eq.live s:nth-child(3) { animation-delay: -.75s; }
+@keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+.dmsg { color: var(--mute); text-align: center; font-size: .92rem; padding: 18px 26px; margin: 0; line-height: 1.5; }
+.dmsg:empty { display: none; }
+
+/* ───────────── Dialogs ───────────── */
+dialog {
+  border: 1px solid var(--edge); background: color-mix(in srgb, var(--bg) 84%, transparent); color: var(--fg);
+  backdrop-filter: blur(28px) saturate(1.3); border-radius: 26px; padding: 0; box-shadow: var(--shadow);
+  width: min(460px, calc(100vw - 28px)); max-height: min(88dvh, 760px); overflow: auto;
+}
+dialog::backdrop { background: rgba(0, 0, 0, .38); backdrop-filter: blur(5px); }
+.dlg { padding: 22px 24px 24px; }
+.dlg header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.dlg h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.6rem; font-variation-settings: 'opsz' 40; }
+.dlg h3 { margin: 22px 0 6px; font-size: 1rem; font-weight: 500; }
+.dlg p { color: var(--mute); font-size: .92rem; line-height: 1.55; margin: 6px 0; }
+.srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border-bottom: 1px solid var(--faint); font-size: .95rem; }
+.srow:last-of-type { border-bottom: 0; }
+.step { display: flex; align-items: center; gap: 6px; }
+.step button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--faint); background: none; cursor: pointer; }
+.step button:hover { border-color: var(--mute); }
+.step output { min-width: 2.6ch; text-align: center; font-variant-numeric: tabular-nums; }
+.step small { color: var(--mute); width: 2.8em; margin-left: 4px; }
+.sw { position: relative; width: 44px; height: 26px; flex: none; }
+.sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.sw span { position: absolute; inset: 0; border-radius: 99px; background: var(--faint); transition: background .25s; }
+.sw span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--fg); transition: transform .25s, background .25s; }
+.sw input:checked + span { background: var(--accent); }
+.sw input:checked + span::after { transform: translateX(18px); background: var(--bg); }
+.sw input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.steps { margin: 10px 0 0; padding-left: 1.2em; color: var(--mute); font-size: .92rem; line-height: 1.6; }
+.steps li { margin: 6px 0; }
+.steps a { color: var(--accent); }
+code, .code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: .8rem; background: color-mix(in srgb, var(--fg) 9%, transparent); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+.copyrow { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.copyrow code { flex: 1; padding: 8px 10px; }
+.field { width: 100%; height: 44px; border-radius: 12px; border: 1px solid var(--faint); background: none; color: var(--fg); padding: 0 14px; font: inherit; margin-top: 6px; }
+.field:focus { border-color: var(--accent); outline: 0; }
+.warn { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-size: .88rem; line-height: 1.55; }
+.actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+.btn { border: 1px solid var(--faint); background: none; padding: 10px 18px; border-radius: 999px; cursor: pointer; font-weight: 500; font-size: .92rem; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.keys { color: var(--mute); font-size: .84rem; line-height: 1.7; margin-top: 14px; }
+
+/* ───────────── Toast ───────────── */
+.toast {
+  position: fixed; z-index: 40; left: 50%; bottom: 104px; transform: translate(-50%, 14px); opacity: 0; pointer-events: none;
+  max-width: min(520px, calc(100vw - 32px)); padding: 11px 18px; border-radius: 16px; font-size: .92rem; line-height: 1.4; text-align: center;
+  background: var(--glass-strong); border: 1px solid var(--edge); backdrop-filter: blur(20px); box-shadow: var(--shadow);
+  transition: opacity .35s, transform .45s cubic-bezier(.2, .8, .2, 1);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 520px) {
+  .awake span { display: none; }
+  .top { padding-left: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orb, .colon, .dots i.now, .awake i { animation: none !important; }
+  .d.flip, .pomo.flash .ptime { animation: none !important; }
+  * { transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><i class="orb o4"></i>
+  <div class="grain"></div><div class="vignette"></div>
+</div>
+
+<header class="top">
+  <div class="left">
+    <span class="brand">Still</span>
+    <button class="awake" id="awake" data-s="off" title="Keeps your screen and PC awake while this page is open"><i></i><span id="awakeTxt">Checking…</span></button>
+  </div>
+  <div class="right">
+    <button class="ibtn txt" id="btnFmt" title="Switch 12 / 24 hour (H)" aria-label="Switch between 12 and 24 hour time">24h</button>
+    <button class="ibtn" id="btnTheme" title="Light / dark (T)" aria-label="Switch light or dark mode"></button>
+    <button class="ibtn" id="btnFs" title="Fullscreen (F)" aria-label="Toggle fullscreen"></button>
+    <button class="ibtn" id="btnSet" title="Settings" aria-label="Open settings" data-ic="gear"></button>
+  </div>
+</header>
+
+<main class="stage">
+  <div class="date" id="date"></div>
+  <div class="time" id="time" title="Double-click for fullscreen">
+    <div class="digits" id="digits">
+      <span class="d"></span><span class="d"></span><span class="colon">:</span><span class="d"></span><span class="d"></span>
+      <div class="side"><span id="sec"></span><span id="ampm"></span></div>
+    </div>
+  </div>
+
+  <section class="pomo" id="pomo" aria-label="Pomodoro timer">
+    <div class="seg" role="tablist" aria-label="Session type">
+      <button role="tab" data-phase="focus" aria-selected="true">Focus</button>
+      <button role="tab" data-phase="short" aria-selected="false">Short break</button>
+      <button role="tab" data-phase="long" aria-selected="false">Long break</button>
+    </div>
+    <div class="prow">
+      <button class="ghost-btn" id="pReset" aria-label="Reset timer" title="Reset" data-ic="reset"></button>
+      <div class="ptime" id="ptime" aria-live="off">25:00</div>
+      <button class="go" id="pGo" aria-label="Start timer" title="Start / pause (Space)"></button>
+      <button class="ghost-btn" id="pSkip" aria-label="Skip to next session" title="Skip" data-ic="next"></button>
+    </div>
+    <div class="bar" aria-hidden="true"><i id="pBar"></i></div>
+    <div class="dots" id="dots" title="Focus sessions until your long break"></div>
+  </section>
+</main>
+
+<footer class="np" id="np" data-state="off">
+  <div class="npv" data-v="off">
+    <span class="npi" data-ic="lib"></span>
+    <span class="npt">Play your own music while you focus</span>
+    <button class="pill" id="npConnect">Connect Spotify</button>
+  </div>
+  <div class="npv" data-v="idle">
+    <span class="npi" data-ic="lib"></span>
+    <span class="npt">Nothing playing</span>
+    <button class="pill" id="npOpen">Open library</button>
+  </div>
+  <div class="npv" data-v="playing">
+    <button class="cover" id="npCover" aria-label="Open library"><img id="npImg" alt=""></button>
+    <div class="meta"><b id="npTitle"></b><span id="npArtist"></span></div>
+    <div class="ctl">
+      <input id="vol" type="range" min="0" max="100" aria-label="Volume">
+      <button class="cbtn" id="npPrev" aria-label="Previous song" data-ic="prev"></button>
+      <button class="cbtn big" id="npPlay" aria-label="Play or pause music"></button>
+      <button class="cbtn" id="npNext" aria-label="Next song" data-ic="next"></button>
+      <button class="cbtn" id="npLib" aria-label="Open library (L)" title="Library (L)" data-ic="lib"></button>
+    </div>
+    <div class="prog" id="prog" aria-hidden="true"><i id="progFill"></i></div>
+  </div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Spotify library" inert>
+  <div class="dh">
+    <button class="ibtn back" id="dBack" aria-label="Back to playlists" data-ic="back" hidden></button>
+    <h2 id="dTitle">Your library</h2>
+    <div class="dh-r">
+      <button class="btn primary" id="dPlayAll" hidden>Play playlist</button>
+      <button class="ibtn" id="dClose" aria-label="Close library" data-ic="close"></button>
+    </div>
+  </div>
+  <div class="tabs" id="dTabs" role="tablist">
+    <button role="tab" data-tab="playlists" aria-selected="true">Playlists</button>
+    <button role="tab" data-tab="liked" aria-selected="false" id="tabLiked">Liked songs</button>
+  </div>
+  <label class="search"><span data-ic="search" style="display:grid"></span><input id="dSearch" type="search" placeholder="Search your library" autocomplete="off" spellcheck="false"></label>
+  <div class="dscroll" id="dScroll">
+    <div id="dList"></div>
+    <div id="dSentinel" style="height:1px"></div>
+    <p class="dmsg" id="dMsg"></p>
+  </div>
+</aside>
+
+<dialog id="settings">
+  <div class="dlg">
+    <header><h2>Settings</h2><button class="ibtn" id="setClose" aria-label="Close settings" data-ic="close"></button></header>
+
+    <h3>Pomodoro</h3>
+    <div class="srow"><span>Focus</span><div class="step" data-k="focus" data-min="1" data-max="120"><button type="button" data-d="-1" aria-label="Less">−</button><output>25</output><button type="button" data-d="1" aria-label="More">+</button><small>min</small></div></div>
+    <div class="srow"><span>Short break</span><div class="step" data-k="short" data-min="1" data-max="60"><button type="button" data-d="-1" aria-label="Less">−</button><output>5</output><button type="button" data-d="1" aria-label="More">+</button><small>min</small></div></div>
+    <div class="srow"><span>Long break</span><div class="step" data-k="long" data-min="1" data-max="90"><button type="button" data-d="-1" aria-label="Less">−</button><output>15</output><button type="button" data-d="1" aria-label="More">+</button><small>min</small></div></div>
+    <div class="srow"><span>Focus sessions before a long break</span><div class="step" data-k="every" data-min="2" data-max="8"><button type="button" data-d="-1" aria-label="Less">−</button><output>4</output><button type="button" data-d="1" aria-label="More">+</button><small></small></div></div>
+    <div class="srow"><span>Start the next session automatically</span><label class="sw"><input type="checkbox" id="optAuto"><span></span></label></div>
+    <div class="srow"><span>Play a soft chime when a session ends</span><label class="sw"><input type="checkbox" id="optChime"><span></span></label></div>
+
+    <h3>Clock</h3>
+    <div class="srow"><span>Show seconds</span><label class="sw"><input type="checkbox" id="optSec"><span></span></label></div>
+
+    <h3>Spotify</h3>
+    <p id="spStatus">Not connected.</p>
+    <div class="actions" style="justify-content:flex-start;margin-top:8px">
+      <button class="btn" id="spSetup">Set up connection</button>
+      <button class="btn" id="spOut" hidden>Disconnect</button>
+    </div>
+
+    <p class="keys">Space start or pause · F fullscreen · T light or dark · H 12 or 24 hour · L library · Esc close</p>
+  </div>
+</dialog>
+
+<dialog id="connect">
+  <div class="dlg">
+    <header><h2>Connect Spotify</h2><button class="ibtn" id="conClose" aria-label="Close" data-ic="close"></button></header>
+    <p>A one-time setup. Your login goes straight to Spotify and stays in this browser. Playing music inside this page needs Spotify Premium.</p>
+    <div class="warn" id="conWarn" hidden></div>
+    <ol class="steps">
+      <li>Open the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Spotify developer dashboard</a> and create an app. Tick <b>Web API</b> and <b>Web Playback SDK</b>.</li>
+      <li>Add this as a Redirect URI:
+        <div class="copyrow"><code id="conUri"></code><button class="btn" id="conCopy" type="button">Copy</button></div>
+      </li>
+      <li>Under User management, add the email of your Spotify account, then paste the app's Client ID here:
+        <input class="field" id="conCid" placeholder="Client ID" autocomplete="off" spellcheck="false">
+      </li>
+    </ol>
+    <div class="actions"><button class="btn" id="conCancel" type="button">Cancel</button><button class="btn primary" id="conGo" type="button">Continue to Spotify</button></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ═══════════════ helpers ═══════════════ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const pad = n => String(n).padStart(2, '0');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = ms => { const s = Math.round(ms / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); };
+
+const svg = (d, s = 20) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const F = 'fill="currentColor" stroke="none"';
+const ICON = {
+  play:   svg(`<path d="M8 5.5v13l11-6.5z" ${F}/>`),
+  pause:  svg(`<rect x="6.5" y="5.5" width="3.8" height="13" rx="1" ${F}/><rect x="13.7" y="5.5" width="3.8" height="13" rx="1" ${F}/>`),
+  prev:   svg(`<path d="M18 6v12L9.5 12z" ${F}/><path d="M6.5 6v12"/>`),
+  next:   svg(`<path d="M6 6v12l8.5-6z" ${F}/><path d="M17.5 6v12"/>`),
+  reset:  svg(`<path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4.5V8h3.5"/>`),
+  sun:    svg(`<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>`),
+  moon:   svg(`<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>`),
+  expand: svg(`<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>`),
+  shrink: svg(`<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>`),
+  gear:   svg(`<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>`),
+  lib:    svg(`<path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>`),
+  close:  svg(`<path d="M6 6l12 12M18 6 6 18"/>`),
+  back:   svg(`<path d="M15 5l-7 7 7 7"/>`),
+  search: svg(`<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>`, 18)
+};
+$$('[data-ic]').forEach(el => el.innerHTML = ICON[el.dataset.ic]);
+
+let toastT;
+function toast(msg, ms = 4200) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ═══════════════ state ═══════════════ */
+const CFG0 = { focus: 25, short: 5, long: 15, every: 4, auto: true, chime: true, seconds: true };
+const cfg = Object.assign({}, CFG0, store.get('still.cfg', {}));
+const ui = {
+  h24: store.get('still.h24', (() => { try { return !new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12; } catch { return true; } })())
+};
+let theme = document.documentElement.dataset.theme;
+
+/* ═══════════════ theme, format, fullscreen ═══════════════ */
+function setTheme(t) {
+  theme = t; document.documentElement.dataset.theme = t; store.set('still.theme', t);
+  $('meta[name=theme-color]').content = t === 'dark' ? '#060811' : '#e8edf1';
+  $('#btnTheme').innerHTML = t === 'dark' ? ICON.sun : ICON.moon;
+  if (document.documentElement.style.getPropertyValue('--tint-o')) document.documentElement.style.setProperty('--tint-o', t === 'light' ? .7 : .55);
+}
+function setFormat(h24) {
+  ui.h24 = h24; store.set('still.h24', h24);
+  $('#btnFmt').textContent = h24 ? '24h' : '12h';
+  last.hm = ''; last.ap = null; renderClock();
+}
+function toggleFs() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => toast('Fullscreen is blocked in this window.'));
+}
+document.addEventListener('fullscreenchange', () => { $('#btnFs').innerHTML = document.fullscreenElement ? ICON.shrink : ICON.expand; });
+$('#btnTheme').onclick = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+$('#btnFmt').onclick = () => setFormat(!ui.h24);
+$('#btnFs').onclick = toggleFs;
+$('#time').addEventListener('dblclick', toggleFs);
+
+/* ═══════════════ keep awake ═══════════════ */
+let wl = null;
+function setAwake(s) {
+  const b = $('#awake'); b.dataset.s = s;
+  $('#awakeTxt').textContent = s === 'on' ? 'Screen stays on' : s === 'off' ? 'Sleep lock off. Click to retry' : 'This browser can’t block sleep';
+}
+async function keepAwake() {
+  if (!('wakeLock' in navigator)) { setAwake('unsupported'); return; }
+  try {
+    wl = await navigator.wakeLock.request('screen');
+    setAwake('on');
+    wl.addEventListener('release', () => { if (document.visibilityState === 'visible') setAwake('off'); });
+  } catch { setAwake('off'); }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { if (!wl || wl.released) keepAwake(); }, { passive: true }));
+$('#awake').onclick = keepAwake;
+
+/* ═══════════════ clock ═══════════════ */
+const last = { hm: '', sec: '', ap: null, date: '' };
+const slots = $$('#digits > .d');
+const dateFmt = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+function renderClock() {
+  const n = new Date(); let h = n.getHours(); const m = n.getMinutes(), s = n.getSeconds();
+  let ap = '';
+  if (!ui.h24) { ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; }
+  const hm = pad(h) + pad(m);
+  if (hm !== last.hm) {
+    const first = last.hm === '';
+    for (let i = 0; i < 4; i++) {
+      const el = slots[i];
+      if (first || hm[i] !== last.hm[i]) {
+        el.textContent = hm[i];
+        if (!first) { el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip'); }
+      }
+    }
+    slots[0].classList.toggle('ghost', !ui.h24 && h < 10);
+    last.hm = hm;
+    const d = dateFmt.format(n);
+    if (d !== last.date) { $('#date').textContent = d; last.date = d; }
+  }
+  const ss = cfg.seconds ? pad(s) : '';
+  if (ss !== last.sec) { $('#sec').textContent = ss; last.sec = ss; }
+  if (ap !== last.ap) { $('#ampm').textContent = ap; last.ap = ap; }
+  $('.side').style.display = (cfg.seconds || ap) ? '' : 'none';
+}
+
+/* ═══════════════ pomodoro ═══════════════ */
+const LABEL = { focus: 'Focus', short: 'Short break', long: 'Long break' };
+const durOf = p => cfg[p] * 60000;
+let pom = Object.assign({ phase: 'focus', running: false, endsAt: 0, left: cfg.focus * 60000, cycle: 0 }, store.get('still.pom', {}));
+if (pom.running && pom.endsAt <= Date.now()) { pom.running = false; pom.left = durOf(pom.phase); }
+const savePom = () => store.set('still.pom', pom);
+const remaining = () => pom.running ? Math.max(0, pom.endsAt - Date.now()) : pom.left;
+const lastP = { txt: '', run: null, phase: '', dots: '' };
+
+function applyPhase() { document.documentElement.dataset.phase = pom.phase; }
+function renderPomo(force) {
+  const rem = remaining(), secs = Math.ceil(rem / 1000);
+  const txt = pad(Math.floor(secs / 60)) + ':' + pad(secs % 60);
+  if (txt !== lastP.txt || force) { $('#ptime').textContent = txt; lastP.txt = txt; }
+  $('#pBar').style.transform = `scaleX(${Math.min(1, Math.max(0, 1 - rem / durOf(pom.phase)))})`;
+  if (force || lastP.run !== pom.running) {
+    $('#pGo').innerHTML = pom.running ? ICON.pause : ICON.play;
+    $('#pGo').setAttribute('aria-label', pom.running ? 'Pause timer' : 'Start timer');
+    lastP.run = pom.running;
+  }
+  if (force || lastP.phase !== pom.phase) {
+    $$('.seg button').forEach(b => b.setAttribute('aria-selected', b.dataset.phase === pom.phase));
+    lastP.phase = pom.phase;
+  }
+  const dk = cfg.every + ':' + Math.min(pom.cycle, cfg.every) + ':' + pom.phase;
+  if (force || dk !== lastP.dots) {
+    $('#dots').innerHTML = Array.from({ length: cfg.every }, (_, i) =>
+      `<i class="${i < Math.min(pom.cycle, cfg.every) ? 'on' : ''}${pom.phase === 'focus' && i === pom.cycle ? ' now' : ''}"></i>`).join('');
+    lastP.dots = dk;
+  }
+  document.title = pom.running ? `${txt}  ${LABEL[pom.phase]}` : 'Still';
+}
+function pStart() {
+  if (pom.running) return;
+  if (pom.left <= 0) pom.left = durOf(pom.phase);
+  pom.endsAt = Date.now() + pom.left; pom.running = true;
+  ensureAudio(); askNotify(); savePom(); renderPomo(true);
+}
+function pPause() { if (!pom.running) return; pom.left = Math.max(0, pom.endsAt - Date.now()); pom.running = false; savePom(); renderPomo(true); }
+const pToggle = () => pom.running ? pPause() : pStart();
+function pReset() { pom.running = false; pom.left = durOf(pom.phase); savePom(); renderPomo(true); }
+function pSet(ph) { pom.phase = ph; pom.running = false; pom.left = durOf(ph); if (ph === 'focus' && pom.cycle >= cfg.every) pom.cycle = 0; savePom(); applyPhase(); renderPomo(true); }
+function pAdvance(completed) {
+  const from = pom.phase;
+  if (from === 'focus' && completed) pom.cycle++;
+  const next = from === 'focus' ? (pom.cycle >= cfg.every ? 'long' : 'short') : 'focus';
+  if (from === 'long') pom.cycle = 0;
+  pom.phase = next; pom.left = durOf(next);
+  if (completed && cfg.auto) { pom.running = true; pom.endsAt = Date.now() + pom.left; } else pom.running = false;
+  savePom(); applyPhase(); renderPomo(true);
+}
+function pComplete() {
+  const from = pom.phase;
+  chime();
+  const msg = from === 'focus' ? 'Focus session done. Time for a break.' : 'Break over. Ready to focus.';
+  toast(msg, 6000); notify('Still', msg);
+  const p = $('#pomo'); p.classList.remove('flash'); void p.offsetWidth; p.classList.add('flash');
+  pAdvance(true);
+}
+$('#pGo').onclick = pToggle;
+$('#pReset').onclick = pReset;
+$('#pSkip').onclick = () => pAdvance(false);
+$$('.seg button').forEach(b => b.onclick = () => pSet(b.dataset.phase));
+
+let ac;
+function ensureAudio() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch {} }
+function chime() {
+  if (!cfg.chime || !ac) return;
+  const t = ac.currentTime;
+  [[523.25, 0], [783.99, .2], [1046.5, .4]].forEach(([f, d]) => {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.14, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + 1.8);
+    o.connect(g).connect(ac.destination); o.start(t + d); o.stop(t + d + 1.9);
+  });
+}
+function askNotify() { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); }
+function notify(t, b) { if ('Notification' in window && Notification.permission === 'granted') { try { new Notification(t, { body: b, silent: true }); } catch {} } }
+
+/* ═══════════════ settings ═══════════════ */
+const settings = $('#settings'), connect = $('#connect');
+function syncSettings() {
+  $$('#settings .step').forEach(st => st.querySelector('output').textContent = cfg[st.dataset.k]);
+  $('#optAuto').checked = cfg.auto; $('#optChime').checked = cfg.chime; $('#optSec').checked = cfg.seconds;
+  $('#spStatus').textContent = SP.tok ? (me ? `Connected as ${me.display_name || me.id}.` : 'Connected.') : 'Not connected.';
+  $('#spOut').hidden = !SP.tok;
+  $('#spSetup').hidden = !!CID_PRESET && !!SP.tok;
+  $('#spSetup').textContent = CID_PRESET ? 'Connect Spotify' : SP.tok ? 'Change Client ID' : 'Set up connection';
+}
+$('#btnSet').onclick = () => { syncSettings(); settings.showModal(); };
+$('#setClose').onclick = () => settings.close();
+[settings, connect].forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+settings.addEventListener('click', e => {
+  const b = e.target.closest('.step button'); if (!b) return;
+  const st = b.closest('.step'), k = st.dataset.k;
+  cfg[k] = Math.min(+st.dataset.max, Math.max(+st.dataset.min, cfg[k] + +b.dataset.d));
+  st.querySelector('output').textContent = cfg[k];
+  store.set('still.cfg', cfg);
+  if (k === pom.phase && !pom.running) { pom.left = durOf(k); savePom(); }
+  renderPomo(true);
+});
+[['#optAuto', 'auto'], ['#optChime', 'chime'], ['#optSec', 'seconds']].forEach(([sel, k]) =>
+  $(sel).addEventListener('change', e => { cfg[k] = e.target.checked; store.set('still.cfg', cfg); last.sec = null; renderClock(); if (k === 'chime' && cfg.chime) { ensureAudio(); chime(); } }));
+$('#spSetup').onclick = () => { settings.close(); CID_PRESET && canAuth ? beginAuth() : openConnect(); };
+$('#spOut').onclick = () => { disconnect(); syncSettings(); toast('Spotify disconnected.'); };
+
+/* ═══════════════ Spotify: auth (PKCE, no server needed) ═══════════════ */
+const SCOPES = ['streaming', 'user-read-email', 'user-read-private', 'user-library-read', 'playlist-read-private', 'playlist-read-collaborative', 'user-read-playback-state', 'user-modify-playback-state'].join(' ');
+const CID_PRESET = (window.STILL_CONFIG && String(window.STILL_CONFIG.spotifyClientId || '').trim()) || '';
+const SP = { cid: CID_PRESET || store.get('still.cid', ''), tok: store.get('still.tok', null) };
+let me = null, player = null, deviceId = null;
+const isFile = location.protocol === 'file:';
+const canAuth = !isFile && location.hostname !== 'localhost' && !!(window.crypto && crypto.subtle);
+const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('');
+
+function openConnect() {
+  const file = location.pathname.split('/').pop() || 'still.html';
+  const uri = canAuth ? redirectUri() : `http://127.0.0.1:5173/${file}`;
+  $('#conUri').textContent = uri;
+  $('#conCid').value = SP.cid;
+  const w = $('#conWarn');
+  if (!canAuth) {
+    w.hidden = false;
+    w.innerHTML = isFile
+      ? `Spotify can’t send you back to a file on your computer. Serve this folder instead: open a terminal in it, run <code>python -m http.server 5173 --bind 127.0.0.1</code>, then open <code>${esc(uri)}</code>.`
+      : `Spotify doesn’t accept “localhost”. Open this page at <code>http://127.0.0.1:${esc(location.port || '80')}${esc(location.pathname)}</code> instead.`;
+  } else w.hidden = true;
+  $('#conGo').disabled = !canAuth;
+  connect.showModal();
+}
+$('#conClose').onclick = $('#conCancel').onclick = () => connect.close();
+$('#conCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#conUri').textContent); $('#conCopy').textContent = 'Copied'; setTimeout(() => $('#conCopy').textContent = 'Copy', 1600); } catch {} };
+$('#conGo').onclick = () => {
+  const id = $('#conCid').value.trim();
+  if (!/^[a-f0-9]{32}$/i.test(id)) { toast('That doesn’t look like a Client ID (32 letters and numbers).'); return; }
+  SP.cid = id; store.set('still.cid', id); beginAuth();
+};
+
+async function beginAuth() {
+  if (!canAuth) { openConnect(); return; }
+  const verifier = rand(96), state = rand(16);
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  store.set('still.pkce', { verifier, state });
+  const p = new URLSearchParams({ client_id: SP.cid, response_type: 'code', redirect_uri: redirectUri(), scope: SCOPES, code_challenge_method: 'S256', code_challenge: challenge, state });
+  location.href = 'https://accounts.spotify.com/authorize?' + p;
+}
+function saveTok(j) {
+  SP.tok = { access: j.access_token, refresh: j.refresh_token || SP.tok?.refresh, exp: Date.now() + j.expires_in * 1000 };
+  store.set('still.tok', SP.tok);
+}
+async function handleRedirect() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('code') && !q.has('error')) return;
+  const saved = store.get('still.pkce', null);
+  history.replaceState({}, '', location.pathname);
+  if (q.has('error')) { toast('Spotify sign-in was cancelled.'); return; }
+  if (!saved || saved.state !== q.get('state')) { toast('Spotify sign-in failed. Please try again.'); return; }
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: redirectUri(), client_id: SP.cid, code_verifier: saved.verifier })
+    });
+    if (!r.ok) throw new Error(r.status);
+    saveTok(await r.json()); store.del('still.pkce');
+  } catch { toast('Couldn’t finish signing in to Spotify. Check the Redirect URI and Client ID.'); }
+}
+async function refresh() {
+  if (!SP.tok?.refresh) { disconnect(); return null; }
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: SP.tok.refresh, client_id: SP.cid })
+    });
+    if (!r.ok) { disconnect(); toast('Spotify session expired. Connect again.'); return null; }
+    saveTok(await r.json()); return SP.tok.access;
+  } catch { return SP.tok?.access || null; }
+}
+async function token() { if (!SP.tok) return null; return Date.now() < SP.tok.exp - 60000 ? SP.tok.access : refresh(); }
+function disconnect() {
+  try { player?.disconnect(); } catch {}
+  player = null; deviceId = null; me = null; SP.tok = null; store.del('still.tok');
+  Object.assign(lib, { loaded: false, pl: [], liked: [], likedNext: '/me/tracks?limit=50', likedDone: false, likedTotal: null, plTracks: {} });
+  closeDrawer(); setNP('off'); setTint(null);
+}
+async function api(path, opt = {}, retry = true) {
+  const t = await token(); if (!t) throw Object.assign(new Error('not connected'), { status: 401 });
+  const r = await fetch(path.startsWith('http') ? path : 'https://api.spotify.com/v1' + path, {
+    ...opt, headers: { Authorization: 'Bearer ' + t, ...(opt.body ? { 'Content-Type': 'application/json' } : {}) }
+  });
+  if (r.status === 401 && retry) { await refresh(); return api(path, opt, false); }
+  if (r.status === 429) { await sleep((+r.headers.get('Retry-After') || 2) * 1000); return api(path, opt, retry); }
+  const txt = await r.text();
+  if (!r.ok) { let body = null; try { body = JSON.parse(txt); } catch {} throw Object.assign(new Error('spotify ' + r.status), { status: r.status, body }); }
+  return txt ? JSON.parse(txt) : null;
+}
+function fail(e) {
+  if (e.status === 403) toast('Spotify refused that request. Make sure your account is listed under User management for your app, and that Premium is active.', 7000);
+  else if (e.status === 401) toast('Spotify session expired. Connect again.');
+  else toast(`Spotify request failed (${e.status || 'network'}).`);
+}
+
+/* ═══════════════ Spotify: now-playing bar & player ═══════════════ */
+const np = $('#np');
+let cur = { uri: '', paused: true }, prog = { pos: 0, at: 0, dur: 0, paused: true };
+const setNP = s => { np.dataset.state = s; };
+function pickImg(imgs, want = 160) {
+  if (!imgs || !imgs.length) return '';
+  const w = imgs.filter(i => i.width);
+  if (!w.length) return imgs[imgs.length - 1].url;
+  const big = w.filter(i => i.width >= want).sort((a, b) => a.width - b.width);
+  return (big[0] || w.sort((a, b) => b.width - a.width)[0]).url;
+}
+function setTint(c) {
+  const r = document.documentElement;
+  if (c) { r.style.setProperty('--tint', c); r.style.setProperty('--tint-o', theme === 'light' ? .7 : .55); }
+  else r.style.removeProperty('--tint-o');
+}
+function tintFrom(url) {
+  if (!url) return setTint(null);
+  const im = new Image(); im.crossOrigin = 'anonymous';
+  im.onload = () => {
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 24;
+      const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0, 24, 24);
+      const d = x.getImageData(0, 0, 24, 24).data; let r = 0, g = 0, b = 0, w = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+        const sat = (mx - mn) / (mx || 1), wt = .15 + sat * sat * 3;
+        r += d[i] * wt; g += d[i + 1] * wt; b += d[i + 2] * wt; w += wt;
+      }
+      setTint(`rgb(${r / w | 0},${g / w | 0},${b / w | 0})`);
+    } catch { setTint(null); }
+  };
+  im.onerror = () => setTint(null);
+  im.src = url;
+}
+function onState(s) {
+  if (!s || !s.track_window.current_track) { cur = { uri: '', paused: true }; prog.dur = 0; setNP('idle'); setTint(null); markPlaying(); return; }
+  const t = s.track_window.current_track;
+  if (t.uri !== cur.uri) {
+    $('#npTitle').textContent = t.name;
+    $('#npArtist').textContent = t.artists.map(a => a.name).join(', ');
+    const im = $('#npImg'); im.src = pickImg(t.album.images, 128); im.alt = t.album.name;
+    tintFrom(pickImg(t.album.images, 64));
+  }
+  cur = { uri: t.uri, paused: s.paused };
+  prog = { pos: s.position, at: performance.now(), dur: s.duration, paused: s.paused };
+  $('#npPlay').innerHTML = s.paused ? ICON.play : ICON.pause;
+  setNP('playing'); updateProg(); markPlaying();
+}
+function updateProg() {
+  if (!prog.dur) return;
+  const p = Math.min(1, (prog.pos + (prog.paused ? 0 : performance.now() - prog.at)) / prog.dur);
+  $('#progFill').style.transform = `scaleX(${p})`;
+}
+function loadSDK() {
+  return new Promise((res, rej) => {
+    if (window.Spotify) return res();
+    window.onSpotifyWebPlaybackSDKReady = res;
+    const s = document.createElement('script'); s.src = 'https://sdk.scdn.co/spotify-player.js'; s.onerror = () => rej(new Error('sdk'));
+    document.head.appendChild(s);
+  });
+}
+async function initPlayer() {
+  try { await loadSDK(); } catch { toast('Couldn’t load Spotify’s player. Check your connection.'); return; }
+  player = new Spotify.Player({ name: 'Still', getOAuthToken: async cb => cb(await token()), volume: store.get('still.vol', .6) });
+  player.addListener('ready', ({ device_id }) => { deviceId = device_id; });
+  player.addListener('not_ready', () => { deviceId = null; });
+  player.addListener('player_state_changed', onState);
+  player.addListener('account_error', () => toast('Playing music here needs Spotify Premium.', 7000));
+  player.addListener('authentication_error', () => toast('Spotify sign-in expired. Connect again.'));
+  player.addListener('initialization_error', ({ message }) => toast('Player error: ' + message));
+  player.addListener('playback_error', ({ message }) => toast('Playback error: ' + message));
+  player.connect();
+}
+async function waitDevice() { for (let i = 0; i < 40 && !deviceId; i++) await sleep(200); return deviceId; }
+async function playContext({ context, uris, offsetUri }) {
+  try { player?.activateElement?.(); } catch {}
+  if (!deviceId) toast('Waking the player…', 2500);
+  if (!(await waitDevice())) { toast('The player isn’t ready. Premium is required to play here.'); return false; }
+  const body = context ? { context_uri: context, ...(offsetUri ? { offset: { uri: offsetUri } } : {}) } : { uris };
+  try { await api('/me/player/play?device_id=' + deviceId, { method: 'PUT', body: JSON.stringify(body) }); return true; }
+  catch (e) { fail(e); return false; }
+}
+$('#npPlay').onclick = () => player?.togglePlay();
+$('#npPrev').onclick = () => player?.previousTrack();
+$('#npNext').onclick = () => player?.nextTrack();
+$('#vol').value = store.get('still.vol', .6) * 100;
+$('#vol').oninput = e => { const v = e.target.value / 100; store.set('still.vol', v); player?.setVolume(v); };
+$('#prog').addEventListener('click', e => { if (!prog.dur) return; const r = e.currentTarget.getBoundingClientRect(); player?.seek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * prog.dur); });
+$('#npConnect').onclick = () => SP.cid && canAuth ? beginAuth() : openConnect();
+[$('#npOpen'), $('#npLib'), $('#npCover')].forEach(b => b.onclick = openDrawer);
+
+/* ═══════════════ Spotify: library drawer ═══════════════ */
+const drawer = $('#drawer'), dList = $('#dList'), dScroll = $('#dScroll'), dSearch = $('#dSearch'), dSentinel = $('#dSentinel');
+const lib = { loaded: false, busy: false, pl: [], liked: [], likedNext: '/me/tracks?limit=50', likedDone: false, likedTotal: null, busyLiked: false, plTracks: {} };
+const view = { mode: 'playlists', pl: null, q: '', limit: 120, rendered: 0, msg: '' };
+let drawerOpen = false;
+
+const norm = t => ({ id: t.id, uri: t.uri, name: t.name, artists: (t.artists || []).map(a => a.name).join(', '), img: pickImg(t.album?.images, 96), dur: t.duration_ms });
+const normPl = p => {
+  const n = p.items?.total ?? p.tracks?.total, own = !!me && p.owner?.id === me.id;
+  return { id: p.id, uri: p.uri, name: p.name || 'Untitled', img: pickImg(p.images, 96), own,
+    sub: [own ? '' : (p.owner?.display_name ? 'by ' + p.owner.display_name : ''), n != null ? n + ' songs' : ''].filter(Boolean).join(', ') || 'Playlist' };
+};
+const EQ = '<span class="eq"><s></s><s></s><s></s></span>';
+const plRow = p => `<div class="row" role="button" tabindex="0" data-act="openpl" data-id="${esc(p.id)}"><img class="th" loading="lazy" alt="" src="${esc(p.img)}"><span class="rt"><b>${esc(p.name)}</b><i>${esc(p.sub)}</i></span><button class="rplay" data-act="playpl" data-id="${esc(p.id)}" aria-label="Play ${esc(p.name)}">${ICON.play}</button></div>`;
+const trRow = (t, i) => { const on = t.uri === cur.uri; return `<div class="row${on ? ' on' : ''}" role="button" tabindex="0" data-act="track" data-i="${i}" data-uri="${esc(t.uri)}"><img class="th" loading="lazy" alt="" src="${esc(t.img)}"><span class="rt"><b>${esc(t.name)}</b><i>${esc(t.artists)}</i></span><span class="dur">${on ? EQ.replace('class="eq"', 'class="eq' + (cur.paused ? '' : ' live') + '"') : fmt(t.dur)}</span></div>`; };
+
+function currentItems() {
+  const q = view.q.trim().toLowerCase();
+  const src = view.mode === 'playlists' ? lib.pl : view.mode === 'liked' ? lib.liked : (lib.plTracks[view.pl?.id] || []);
+  if (!q) return src;
+  return src.filter(x => (view.mode === 'playlists' ? x.name : x.name + ' ' + x.artists).toLowerCase().includes(q));
+}
+function setMsg(t) { $('#dMsg').textContent = t || ''; }
+function renderRows(reset) {
+  const items = currentItems();
+  if (reset) { dList.innerHTML = ''; view.rendered = 0; view.limit = 120; dScroll.scrollTop = 0; }
+  const end = Math.min(items.length, view.limit), out = [];
+  for (let i = view.rendered; i < end; i++) out.push(view.mode === 'playlists' ? plRow(items[i]) : trRow(items[i], i));
+  dList.insertAdjacentHTML('beforeend', out.join('')); view.rendered = end;
+  if (items.length) return setMsg('');
+  if (lib.busy || (view.mode === 'liked' && lib.busyLiked)) return setMsg('Loading…');
+  if (view.q) return setMsg(`Nothing matches “${view.q}”.`);
+  setMsg(view.mode === 'playlists' ? 'No playlists yet.' : view.mode === 'liked' ? (lib.likedDone ? 'No liked songs yet.' : '') : (view.msg || 'No songs to show.'));
+}
+async function more() {
+  if (more.busy) return; more.busy = true;
+  try {
+    const items = currentItems();
+    if (view.rendered < items.length) { view.limit = view.rendered + 120; renderRows(false); }
+    else if (view.mode === 'liked' && !lib.likedDone && !view.q && drawerOpen) { await fetchLiked(); view.limit = view.rendered + 120; renderRows(false); }
+  } finally { more.busy = false; io.unobserve(dSentinel); io.observe(dSentinel); }
+}
+const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more(); }, { root: dScroll, rootMargin: '300px' });
+io.observe(dSentinel);
+
+async function fetchLiked() {
+  if (lib.likedDone || lib.busyLiked) return;
+  lib.busyLiked = true;
+  try {
+    const j = await api(lib.likedNext);
+    for (const it of j.items || []) { const t = it.track || it.item; if (t && t.type === 'track' && !t.is_local) lib.liked.push(norm(t)); }
+    if (j.next) lib.likedNext = j.next; else lib.likedDone = true;
+    if (j.total != null) { lib.likedTotal = j.total; $('#tabLiked').textContent = `Liked songs (${j.total})`; }
+  } catch (e) { fail(e); lib.likedDone = true; }
+  finally { lib.busyLiked = false; }
+}
+async function loadAllLiked() { while (!lib.likedDone) await fetchLiked(); }
+async function initLibrary() {
+  if (lib.loaded || lib.busy) return;
+  lib.busy = true; setMsg('Loading your library…');
+  try {
+    let url = '/me/playlists?limit=50';
+    while (url) { const j = await api(url); for (const p of j.items || []) if (p) lib.pl.push(normPl(p)); url = j.next; }
+    lib.loaded = true;
+  } catch (e) { fail(e); }
+  lib.busy = false; renderRows(true);
+  fetchLiked();
+}
+async function loadPlTracks(id) {
+  let url = `/playlists/${id}/items?limit=100`, fell = false; const out = [];
+  while (url) {
+    let j;
+    try { j = await api(url); }
+    catch (e) { if (!fell && (e.status === 404 || e.status === 400) && url.includes('/items')) { fell = true; url = `/playlists/${id}/tracks?limit=100`; continue; } throw e; }
+    const arr = Array.isArray(j.items) ? j.items : (j.items?.items || []);
+    for (const it of arr) { const t = it.item || it.track; if (t && t.type === 'track' && !t.is_local) out.push(norm(t)); }
+    url = j.next;
+  }
+  return out;
+}
+function syncChrome() {
+  const detail = view.mode === 'detail';
+  $('#dBack').hidden = !detail; $('#dPlayAll').hidden = !detail; $('#dTabs').hidden = detail;
+  $('#dTitle').textContent = detail ? view.pl.name : 'Your library';
+  dSearch.placeholder = detail ? 'Search this playlist' : view.mode === 'liked' ? 'Search liked songs' : 'Search playlists';
+  $$('#dTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === view.mode));
+}
+async function openPlaylist(id) {
+  const p = lib.pl.find(x => x.id === id); if (!p) return;
+  Object.assign(view, { mode: 'detail', pl: p, q: '', msg: '' }); dSearch.value = ''; syncChrome();
+  if (!lib.plTracks[id]) {
+    setMsg('Loading songs…'); dList.innerHTML = '';
+    try { lib.plTracks[id] = await loadPlTracks(id); }
+    catch (e) { lib.plTracks[id] = []; view.msg = 'Couldn’t load the songs in this playlist.'; }
+    if (!lib.plTracks[id].length && !p.own) view.msg = 'Spotify only shares song lists for playlists you own or collaborate on. You can still play this playlist as a whole.';
+  }
+  if (view.mode === 'detail' && view.pl.id === id) renderRows(true);
+}
+async function setTab(tab) {
+  Object.assign(view, { mode: tab, pl: null, q: '' }); dSearch.value = ''; syncChrome();
+  if (tab === 'liked' && !lib.liked.length && !lib.likedDone) { renderRows(true); await fetchLiked(); }
+  if (view.mode === tab) renderRows(true);
+}
+$$('#dTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+$('#dBack').onclick = () => setTab('playlists');
+$('#dPlayAll').onclick = async () => { if (view.pl && await playContext({ context: view.pl.uri })) closeDrawer(300); };
+let sT;
+dSearch.addEventListener('input', () => {
+  clearTimeout(sT);
+  sT = setTimeout(async () => {
+    view.q = dSearch.value; renderRows(true);
+    if (view.q && view.mode === 'liked' && !lib.likedDone) { setMsg('Searching all your liked songs…'); await loadAllLiked(); if (view.q === dSearch.value) renderRows(true); }
+  }, 200);
+});
+async function rowAct(el) {
+  const act = el.dataset.act;
+  if (act === 'openpl') return openPlaylist(el.dataset.id);
+  if (act === 'playpl') { const p = lib.pl.find(x => x.id === el.dataset.id); if (p && await playContext({ context: p.uri })) closeDrawer(300); return; }
+  if (act === 'track') {
+    const items = currentItems(), i = +el.dataset.i, t = items[i]; if (!t) return;
+    const ok = view.mode === 'detail'
+      ? await playContext({ context: view.pl.uri, offsetUri: t.uri })
+      : await playContext({ uris: items.slice(i, i + 100).map(x => x.uri) });
+    if (ok) closeDrawer(300);
+  }
+}
+dList.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el) rowAct(el); });
+dList.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.row')) { e.preventDefault(); rowAct(e.target); } });
+function markPlaying() {
+  $$('.row[data-uri]', dList).forEach(r => {
+    const on = r.dataset.uri === cur.uri;
+    r.classList.toggle('on', on);
+    const d = r.querySelector('.dur'); if (!d) return;
+    const i = +r.dataset.i, t = currentItems()[i];
+    if (t) d.innerHTML = on ? EQ.replace('class="eq"', 'class="eq' + (cur.paused ? '' : ' live') + '"') : fmt(t.dur);
+  });
+}
+function openDrawer() {
+  if (!SP.tok) return SP.cid && canAuth ? beginAuth() : openConnect();
+  drawerOpen = true; drawer.inert = false; drawer.classList.add('open'); $('#scrim').classList.add('on');
+  document.body.classList.remove('idle'); syncChrome();
+  if (!lib.loaded) initLibrary(); else renderRows(true);
+  setTimeout(() => $('#dClose').focus({ preventScroll: true }), 300);
+}
+function closeDrawer(delay = 0) {
+  setTimeout(() => { drawerOpen = false; drawer.classList.remove('open'); drawer.inert = true; $('#scrim').classList.remove('on'); }, delay);
+}
+$('#dClose').onclick = () => closeDrawer();
+$('#scrim').onclick = () => closeDrawer();
+
+/* ═══════════════ calm mode: chrome fades when you're not touching anything ═══════════════ */
+let idleT, lastMove = 0;
+function wake() {
+  const n = Date.now(); if (n - lastMove < 250 && !document.body.classList.contains('idle')) return; lastMove = n;
+  document.body.classList.remove('idle'); clearTimeout(idleT);
+  idleT = setTimeout(() => { if (!document.querySelector('dialog[open]') && !drawerOpen) document.body.classList.add('idle'); }, 4500);
+}
+['pointermove', 'pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(ev => addEventListener(ev, wake, { passive: true }));
+
+/* ═══════════════ keyboard ═══════════════ */
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { if (drawerOpen) closeDrawer(); return; }
+  if (e.target.closest('input, textarea, select, button, [role=button], dialog')) return;
+  const k = e.key.toLowerCase();
+  if (e.key === ' ') { e.preventDefault(); pToggle(); }
+  else if (k === 'f') toggleFs();
+  else if (k === 't') setTheme(theme === 'dark' ? 'light' : 'dark');
+  else if (k === 'h') setFormat(!ui.h24);
+  else if (k === 'l') drawerOpen ? closeDrawer() : openDrawer();
+});
+
+/* ═══════════════ boot ═══════════════ */
+async function bootSpotify() {
+  await handleRedirect();
+  if (!SP.tok) { setNP('off'); return; }
+  try { me = await api('/me'); } catch (e) { if (e.status !== 401) fail(e); if (!SP.tok) return; }
+  setNP('idle');
+  if (me && me.product && me.product !== 'premium') toast('Your Spotify account isn’t Premium, so music can’t play inside this page.', 7000);
+  initPlayer();
+}
+setTheme(theme); setFormat(ui.h24);
+$('#btnFs').innerHTML = ICON.expand;
+applyPhase(); renderPomo(true); renderClock();
+setInterval(() => {
+  renderClock();
+  if (pom.running && pom.endsAt - Date.now() <= 0) pComplete();
+  renderPomo(false); updateProg();
+}, 200);
+keepAwake();
+wake();
+bootSpotify();
+</script>
+</body>
+</html>
