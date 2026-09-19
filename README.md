@@ -1,24 +1,21 @@
 # Still
 
-A focus clock: Pomodoro, 12/24h, fullscreen, keeps your PC awake, light/dark, and your Spotify library.
-Plain static files. No build step, no server code.
+A focus clock: Pomodoro, 12/24h, fullscreen, keeps your PC awake, light/dark, and music from
+a pasted Spotify link or from your own files. Plain static files, no build step, no accounts, no keys.
 
 ## Deploy on Vercel
 
 1. Put this folder in a GitHub repo (or run `vercel` inside the folder).
-2. On Vercel: Framework Preset **Other**, leave Build Command and Output Directory empty.
-3. Note your production URL, e.g. `https://still-yourname.vercel.app`.
+2. On Vercel: Framework Preset **Other**. Leave Build Command and Output Directory empty.
+3. Open the URL Vercel gives you.
 
-## Connect Spotify
+## Music
 
-1. Go to https://developer.spotify.com/dashboard and create an app. Tick **Web API** and **Web Playback SDK**.
-2. Add this Redirect URI exactly (with the trailing slash): `https://YOUR-PROJECT.vercel.app/`
-3. In the app's **User management**, add the email of your Spotify account.
-4. Copy the app's **Client ID** into `config.js`, commit, and Vercel redeploys.
-   (Or leave it empty and paste it in the app once per browser.)
-
-Notes
-- Use your production domain. Preview deployments get different URLs, and Spotify only accepts redirect URIs you registered.
-- Playing music inside the page needs Spotify Premium.
-- Spotify development-mode apps need a Premium owner and allow 5 users. They can only list songs for playlists you own or collaborate on; other playlists can still be played whole.
-- Local testing: Spotify rejects `localhost`. Use `http://127.0.0.1:PORT/` and register that URI too.
+- **Spotify link**: open the music panel (button in the bottom bar, or press L), paste any
+  open.spotify.com link (song, album, playlist, podcast) and it plays in Spotify's official embed.
+  Log in to Spotify in the same browser for full songs (Premium); otherwise Spotify limits embeds to 30-second previews.
+  The small arrow in the bottom bar shows the Spotify player, where you can skip songs and see the playlist.
+- **My files**: drop songs or a folder anywhere on the page, or use Choose songs / Choose folder.
+  Chrome and Edge remember your music folder, so next time you just press "Reopen".
+  Works with mp3, m4a, aac, flac, wav, ogg and opus (whatever your browser can play).
+  Titles, artists and cover art are read from the files' tags.

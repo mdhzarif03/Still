@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Still</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<script src="config.js"></script>
 <meta name="theme-color" content="#060811">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -293,9 +292,50 @@ code, .code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; 
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .keys { color: var(--mute); font-size: .84rem; line-height: 1.7; margin-top: 14px; }
 
+/* ───────────── Music panel ───────────── */
+.cover { position: relative; }
+.cover-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--mute); }
+.cover img { position: relative; z-index: 1; }
+.cover img[hidden] { display: none; }
+.np:not([data-src=local]) [data-local] { display: none; }
+.np:not([data-src=spotify]) [data-sp] { display: none; }
+.th.ph { display: grid; place-items: center; color: var(--mute); }
+.linkbox { display: flex; gap: 8px; padding: 6px 12px 0; }
+.linkbox input { flex: 1; min-width: 0; height: 44px; border-radius: 14px; border: 1px solid var(--faint); background: none; color: var(--fg); padding: 0 14px; font: inherit; font-size: .95rem; }
+.linkbox input:focus { outline: 0; border-color: var(--accent); }
+.hint { color: var(--mute); font-size: .86rem; line-height: 1.55; margin: 10px 14px 6px; }
+.sect { margin: 16px 14px 4px; font-size: .9rem; font-weight: 500; color: var(--mute); }
+.drop { margin: 6px 12px 4px; padding: 22px 16px; border-radius: 18px; border: 1px dashed var(--mute); text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.drop p { margin: 0; color: var(--mute); font-size: .92rem; }
+.drop.has { padding: 12px; }
+.drop.has p { display: none; }
+.drop-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.ftools { display: flex; align-items: center; gap: 2px; padding: 0 4px 0 0; }
+.ftools .search { flex: 1; min-width: 0; margin: 6px 6px 6px 12px; }
+.ibtn[aria-pressed=true] { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.rm { opacity: 0; width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; color: var(--mute); display: grid; place-items: center; cursor: pointer; flex: none; transition: opacity .2s; }
+.rm svg { width: 16px; height: 16px; }
+.row:hover .rm, .row:focus-within .rm { opacity: 1; }
+@media (hover: none) { .rm { opacity: 1; } }
+.veil { position: fixed; inset: 14px; z-index: 50; display: none; place-items: center; border: 2px dashed var(--accent); border-radius: 28px; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(10px); font-family: var(--serif); font-size: clamp(1.6rem, 4vw, 2.6rem); pointer-events: none; }
+body.dragging .veil { display: grid; }
+.tray {
+  position: fixed; z-index: 5; left: 50%; width: min(580px, calc(100vw - 28px)); height: 152px;
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 86px);
+  border-radius: 18px; overflow: hidden; box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transform: translate(-50%, 14px);
+  transition: opacity .4s, transform .5s cubic-bezier(.2, .8, .2, 1), height .45s cubic-bezier(.2, .8, .2, 1);
+}
+.tray.open { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.tray.tall { height: min(352px, calc(100dvh - 200px)); }
+.tray:not([data-on=true]) { visibility: hidden; }
+.tray iframe { width: 100%; height: 100%; border: 0; display: block; border-radius: 14px; }
+#npTray svg { transition: transform .4s; }
+.tray.open ~ .np #npTray svg { transform: rotate(180deg); }
+
 /* ───────────── Toast ───────────── */
 .toast {
-  position: fixed; z-index: 40; left: 50%; bottom: 104px; transform: translate(-50%, 14px); opacity: 0; pointer-events: none;
+  position: fixed; z-index: 40; left: 50%; top: 70px; transform: translate(-50%, -14px); opacity: 0; pointer-events: none;
   max-width: min(520px, calc(100vw - 32px)); padding: 11px 18px; border-radius: 16px; font-size: .92rem; line-height: 1.4; text-align: center;
   background: var(--glass-strong); border: 1px solid var(--edge); backdrop-filter: blur(20px); box-shadow: var(--shadow);
   transition: opacity .35s, transform .45s cubic-bezier(.2, .8, .2, 1);
@@ -359,52 +399,75 @@ code, .code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; 
   </section>
 </main>
 
-<footer class="np" id="np" data-state="off">
+<div class="tray" id="tray" data-on="false" aria-label="Spotify player"><div id="embedHost"></div></div>
+
+<footer class="np" id="np" data-state="off" data-src="">
   <div class="npv" data-v="off">
     <span class="npi" data-ic="lib"></span>
     <span class="npt">Play your own music while you focus</span>
-    <button class="pill" id="npConnect">Connect Spotify</button>
-  </div>
-  <div class="npv" data-v="idle">
-    <span class="npi" data-ic="lib"></span>
-    <span class="npt">Nothing playing</span>
-    <button class="pill" id="npOpen">Open library</button>
+    <button class="pill" id="npAdd">Add music</button>
   </div>
   <div class="npv" data-v="playing">
-    <button class="cover" id="npCover" aria-label="Open library"><img id="npImg" alt=""></button>
+    <button class="cover" id="npCover" aria-label="Open music panel"><span class="cover-ph" data-ic="lib"></span><img id="npImg" alt="" hidden></button>
     <div class="meta"><b id="npTitle"></b><span id="npArtist"></span></div>
     <div class="ctl">
-      <input id="vol" type="range" min="0" max="100" aria-label="Volume">
-      <button class="cbtn" id="npPrev" aria-label="Previous song" data-ic="prev"></button>
+      <input id="vol" data-local type="range" min="0" max="100" aria-label="Volume">
+      <button class="cbtn" id="npPrev" data-local aria-label="Previous song" data-ic="prev"></button>
       <button class="cbtn big" id="npPlay" aria-label="Play or pause music"></button>
-      <button class="cbtn" id="npNext" aria-label="Next song" data-ic="next"></button>
-      <button class="cbtn" id="npLib" aria-label="Open library (L)" title="Library (L)" data-ic="lib"></button>
+      <button class="cbtn" id="npNext" data-local aria-label="Next song" data-ic="next"></button>
+      <button class="cbtn" id="npTray" data-sp aria-label="Show the Spotify player" title="Spotify player (skip songs, see the list)" data-ic="up"></button>
+      <button class="cbtn" id="npLib" aria-label="Open music panel (L)" title="Music (L)" data-ic="lib"></button>
     </div>
     <div class="prog" id="prog" aria-hidden="true"><i id="progFill"></i></div>
   </div>
 </footer>
 
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" aria-label="Spotify library" inert>
+<aside class="drawer" id="drawer" aria-label="Music" inert>
   <div class="dh">
-    <button class="ibtn back" id="dBack" aria-label="Back to playlists" data-ic="back" hidden></button>
-    <h2 id="dTitle">Your library</h2>
-    <div class="dh-r">
-      <button class="btn primary" id="dPlayAll" hidden>Play playlist</button>
-      <button class="ibtn" id="dClose" aria-label="Close library" data-ic="close"></button>
-    </div>
+    <h2>Music</h2>
+    <button class="ibtn" id="dClose" aria-label="Close music panel" data-ic="close"></button>
   </div>
   <div class="tabs" id="dTabs" role="tablist">
-    <button role="tab" data-tab="playlists" aria-selected="true">Playlists</button>
-    <button role="tab" data-tab="liked" aria-selected="false" id="tabLiked">Liked songs</button>
+    <button role="tab" data-tab="spotify" aria-selected="true">Spotify link</button>
+    <button role="tab" data-tab="files" aria-selected="false">My files</button>
   </div>
-  <label class="search"><span data-ic="search" style="display:grid"></span><input id="dSearch" type="search" placeholder="Search your library" autocomplete="off" spellcheck="false"></label>
   <div class="dscroll" id="dScroll">
-    <div id="dList"></div>
-    <div id="dSentinel" style="height:1px"></div>
-    <p class="dmsg" id="dMsg"></p>
+    <section id="paneSp">
+      <form class="linkbox" id="spForm">
+        <input id="spLink" type="text" placeholder="Paste a Spotify link" autocomplete="off" spellcheck="false" aria-label="Spotify link">
+        <button class="btn primary" type="submit">Play</button>
+      </form>
+      <p class="hint">Songs, albums, playlists and podcasts all work. In Spotify, use Share, then Copy link. Log in to Spotify in this browser to hear full songs (Premium). Without it you get 30-second previews.</p>
+      <div class="sect" id="recentHead" hidden>Recent</div>
+      <div id="recent"></div>
+    </section>
+    <section id="paneFiles" hidden>
+      <div class="drop" id="drop">
+        <p>Drop songs or a whole folder anywhere on this page</p>
+        <div class="drop-btns">
+          <button class="btn primary" id="pickFiles" type="button">Choose songs</button>
+          <button class="btn" id="pickDir" type="button">Choose folder</button>
+          <button class="btn" id="reopen" type="button" hidden>Reopen folder</button>
+        </div>
+      </div>
+      <p class="hint" id="fCount" hidden></p>
+      <div class="ftools" id="fTools" hidden>
+        <label class="search"><span data-ic="search" style="display:grid"></span><input id="fSearch" type="search" placeholder="Search your songs" autocomplete="off" spellcheck="false"></label>
+        <button class="ibtn" id="btnShuffle" aria-pressed="false" title="Shuffle" aria-label="Shuffle" data-ic="shuffle"></button>
+        <button class="ibtn" id="btnRepeat" aria-pressed="true" title="Repeat the list" aria-label="Repeat the list" data-ic="repeat"></button>
+        <button class="ibtn" id="btnClear" title="Clear list" aria-label="Clear list" data-ic="trash"></button>
+      </div>
+      <div id="fList"></div>
+      <div id="fSent" style="height:1px"></div>
+      <p class="dmsg" id="fMsg"></p>
+    </section>
   </div>
+  <input type="file" id="fileIn" accept="audio/*,.mp3,.m4a,.flac,.wav,.ogg,.opus,.aac" multiple hidden>
+  <input type="file" id="dirIn" webkitdirectory multiple hidden>
 </aside>
+
+<div class="veil" id="veil" aria-hidden="true">Drop to play</div>
 
 <dialog id="settings">
   <div class="dlg">
@@ -421,32 +484,7 @@ code, .code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; 
     <h3>Clock</h3>
     <div class="srow"><span>Show seconds</span><label class="sw"><input type="checkbox" id="optSec"><span></span></label></div>
 
-    <h3>Spotify</h3>
-    <p id="spStatus">Not connected.</p>
-    <div class="actions" style="justify-content:flex-start;margin-top:8px">
-      <button class="btn" id="spSetup">Set up connection</button>
-      <button class="btn" id="spOut" hidden>Disconnect</button>
-    </div>
-
-    <p class="keys">Space start or pause · F fullscreen · T light or dark · H 12 or 24 hour · L library · Esc close</p>
-  </div>
-</dialog>
-
-<dialog id="connect">
-  <div class="dlg">
-    <header><h2>Connect Spotify</h2><button class="ibtn" id="conClose" aria-label="Close" data-ic="close"></button></header>
-    <p>A one-time setup. Your login goes straight to Spotify and stays in this browser. Playing music inside this page needs Spotify Premium.</p>
-    <div class="warn" id="conWarn" hidden></div>
-    <ol class="steps">
-      <li>Open the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Spotify developer dashboard</a> and create an app. Tick <b>Web API</b> and <b>Web Playback SDK</b>.</li>
-      <li>Add this as a Redirect URI:
-        <div class="copyrow"><code id="conUri"></code><button class="btn" id="conCopy" type="button">Copy</button></div>
-      </li>
-      <li>Under User management, add the email of your Spotify account, then paste the app's Client ID here:
-        <input class="field" id="conCid" placeholder="Client ID" autocomplete="off" spellcheck="false">
-      </li>
-    </ol>
-    <div class="actions"><button class="btn" id="conCancel" type="button">Cancel</button><button class="btn primary" id="conGo" type="button">Continue to Spotify</button></div>
+    <p class="keys">Space start or pause · F fullscreen · T light or dark · H 12 or 24 hour · L music · Esc close</p>
   </div>
 </dialog>
 
@@ -483,7 +521,11 @@ const ICON = {
   lib:    svg(`<path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>`),
   close:  svg(`<path d="M6 6l12 12M18 6 6 18"/>`),
   back:   svg(`<path d="M15 5l-7 7 7 7"/>`),
-  search: svg(`<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>`, 18)
+  search: svg(`<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>`, 18),
+  up:     svg(`<path d="M6 15l6-6 6 6"/>`),
+  shuffle:svg(`<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>`),
+  repeat: svg(`<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`),
+  trash:  svg(`<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>`)
 };
 $$('[data-ic]').forEach(el => el.innerHTML = ICON[el.dataset.ic]);
 
@@ -646,22 +688,18 @@ function chime() {
     o.connect(g).connect(ac.destination); o.start(t + d); o.stop(t + d + 1.9);
   });
 }
-function askNotify() { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); }
-function notify(t, b) { if ('Notification' in window && Notification.permission === 'granted') { try { new Notification(t, { body: b, silent: true }); } catch {} } }
+function askNotify() { if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); }
+function notify(t, b) { if (window.Notification && Notification.permission === 'granted') { try { new Notification(t, { body: b, silent: true }); } catch {} } }
 
 /* ═══════════════ settings ═══════════════ */
-const settings = $('#settings'), connect = $('#connect');
+const settings = $('#settings');
 function syncSettings() {
   $$('#settings .step').forEach(st => st.querySelector('output').textContent = cfg[st.dataset.k]);
   $('#optAuto').checked = cfg.auto; $('#optChime').checked = cfg.chime; $('#optSec').checked = cfg.seconds;
-  $('#spStatus').textContent = SP.tok ? (me ? `Connected as ${me.display_name || me.id}.` : 'Connected.') : 'Not connected.';
-  $('#spOut').hidden = !SP.tok;
-  $('#spSetup').hidden = !!CID_PRESET && !!SP.tok;
-  $('#spSetup').textContent = CID_PRESET ? 'Connect Spotify' : SP.tok ? 'Change Client ID' : 'Set up connection';
 }
 $('#btnSet').onclick = () => { syncSettings(); settings.showModal(); };
 $('#setClose').onclick = () => settings.close();
-[settings, connect].forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+settings.addEventListener('click', e => { if (e.target === settings) settings.close(); });
 settings.addEventListener('click', e => {
   const b = e.target.closest('.step button'); if (!b) return;
   const st = b.closest('.step'), k = st.dataset.k;
@@ -673,116 +711,37 @@ settings.addEventListener('click', e => {
 });
 [['#optAuto', 'auto'], ['#optChime', 'chime'], ['#optSec', 'seconds']].forEach(([sel, k]) =>
   $(sel).addEventListener('change', e => { cfg[k] = e.target.checked; store.set('still.cfg', cfg); last.sec = null; renderClock(); if (k === 'chime' && cfg.chime) { ensureAudio(); chime(); } }));
-$('#spSetup').onclick = () => { settings.close(); CID_PRESET && canAuth ? beginAuth() : openConnect(); };
-$('#spOut').onclick = () => { disconnect(); syncSettings(); toast('Spotify disconnected.'); };
 
-/* ═══════════════ Spotify: auth (PKCE, no server needed) ═══════════════ */
-const SCOPES = ['streaming', 'user-read-email', 'user-read-private', 'user-library-read', 'playlist-read-private', 'playlist-read-collaborative', 'user-read-playback-state', 'user-modify-playback-state'].join(' ');
-const CID_PRESET = (window.STILL_CONFIG && String(window.STILL_CONFIG.spotifyClientId || '').trim()) || '';
-const SP = { cid: CID_PRESET || store.get('still.cid', ''), tok: store.get('still.tok', null) };
-let me = null, player = null, deviceId = null;
-const isFile = location.protocol === 'file:';
-const canAuth = !isFile && location.hostname !== 'localhost' && !!(window.crypto && crypto.subtle);
-const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
-const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const rand = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b % 62]).join('');
+/* ═══════════════ Music ═══════════════ */
+const AUDIO_EXT = /\.(mp3|m4a|aac|flac|wav|ogg|oga|opus|weba|webm)$/i;
+const np = $('#np'), tray = $('#tray'), drawer = $('#drawer'), dScroll = $('#dScroll');
+const aud = new Audio(); aud.preload = 'auto'; aud.volume = store.get('still.vol', .7);
+const music = { src: null };
+const L = { tracks: [], idx: -1, bag: [], hist: [], shuffle: store.get('still.shuffle', false), repeat: store.get('still.repeat', true), q: '', limit: 200, rendered: 0, errs: 0, url: null, source: '' };
+const sp = { ctrl: null, api: null, uri: '', paused: true, pos: 0, dur: 0, at: 0, pending: false };
+let drawerOpen = false, trayMode = 0, savedDir = null, tagLib = null;
+const SP_TYPES = { track: 'Song', album: 'Album', playlist: 'Playlist', artist: 'Artist', episode: 'Podcast episode', show: 'Podcast' };
+const thumb = img => img ? `<img class="th" loading="lazy" alt="" src="${esc(img)}">` : `<span class="th ph">${ICON.lib}</span>`;
+const eqHtml = () => `<span class="eq${aud.paused ? '' : ' live'}"><s></s><s></s><s></s></span>`;
 
-function openConnect() {
-  const file = location.pathname.split('/').pop() || 'still.html';
-  const uri = canAuth ? redirectUri() : `http://127.0.0.1:5173/${file}`;
-  $('#conUri').textContent = uri;
-  $('#conCid').value = SP.cid;
-  const w = $('#conWarn');
-  if (!canAuth) {
-    w.hidden = false;
-    w.innerHTML = isFile
-      ? `Spotify can’t send you back to a file on your computer. Serve this folder instead: open a terminal in it, run <code>python -m http.server 5173 --bind 127.0.0.1</code>, then open <code>${esc(uri)}</code>.`
-      : `Spotify doesn’t accept “localhost”. Open this page at <code>http://127.0.0.1:${esc(location.port || '80')}${esc(location.pathname)}</code> instead.`;
-  } else w.hidden = true;
-  $('#conGo').disabled = !canAuth;
-  connect.showModal();
+/* — shared bar — */
+function setSrc(s) {
+  music.src = s; np.dataset.state = s ? 'playing' : 'off'; np.dataset.src = s || '';
+  tray.dataset.on = String(s === 'spotify');
+  if (s !== 'spotify') { tray.classList.remove('open', 'tall'); trayMode = 0; }
+  syncPlayIcon();
 }
-$('#conClose').onclick = $('#conCancel').onclick = () => connect.close();
-$('#conCopy').onclick = async () => { try { await navigator.clipboard.writeText($('#conUri').textContent); $('#conCopy').textContent = 'Copied'; setTimeout(() => $('#conCopy').textContent = 'Copy', 1600); } catch {} };
-$('#conGo').onclick = () => {
-  const id = $('#conCid').value.trim();
-  if (!/^[a-f0-9]{32}$/i.test(id)) { toast('That doesn’t look like a Client ID (32 letters and numbers).'); return; }
-  SP.cid = id; store.set('still.cid', id); beginAuth();
-};
-
-async function beginAuth() {
-  if (!canAuth) { openConnect(); return; }
-  const verifier = rand(96), state = rand(16);
-  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
-  store.set('still.pkce', { verifier, state });
-  const p = new URLSearchParams({ client_id: SP.cid, response_type: 'code', redirect_uri: redirectUri(), scope: SCOPES, code_challenge_method: 'S256', code_challenge: challenge, state });
-  location.href = 'https://accounts.spotify.com/authorize?' + p;
+function showMeta(title, sub, img) {
+  $('#npTitle').textContent = title; $('#npArtist').textContent = sub || '';
+  const im = $('#npImg'); if (img) { im.src = img; im.hidden = false; } else { im.removeAttribute('src'); im.hidden = true; }
 }
-function saveTok(j) {
-  SP.tok = { access: j.access_token, refresh: j.refresh_token || SP.tok?.refresh, exp: Date.now() + j.expires_in * 1000 };
-  store.set('still.tok', SP.tok);
-}
-async function handleRedirect() {
-  const q = new URLSearchParams(location.search);
-  if (!q.has('code') && !q.has('error')) return;
-  const saved = store.get('still.pkce', null);
-  history.replaceState({}, '', location.pathname);
-  if (q.has('error')) { toast('Spotify sign-in was cancelled.'); return; }
-  if (!saved || saved.state !== q.get('state')) { toast('Spotify sign-in failed. Please try again.'); return; }
-  try {
-    const r = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: redirectUri(), client_id: SP.cid, code_verifier: saved.verifier })
-    });
-    if (!r.ok) throw new Error(r.status);
-    saveTok(await r.json()); store.del('still.pkce');
-  } catch { toast('Couldn’t finish signing in to Spotify. Check the Redirect URI and Client ID.'); }
-}
-async function refresh() {
-  if (!SP.tok?.refresh) { disconnect(); return null; }
-  try {
-    const r = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: SP.tok.refresh, client_id: SP.cid })
-    });
-    if (!r.ok) { disconnect(); toast('Spotify session expired. Connect again.'); return null; }
-    saveTok(await r.json()); return SP.tok.access;
-  } catch { return SP.tok?.access || null; }
-}
-async function token() { if (!SP.tok) return null; return Date.now() < SP.tok.exp - 60000 ? SP.tok.access : refresh(); }
-function disconnect() {
-  try { player?.disconnect(); } catch {}
-  player = null; deviceId = null; me = null; SP.tok = null; store.del('still.tok');
-  Object.assign(lib, { loaded: false, pl: [], liked: [], likedNext: '/me/tracks?limit=50', likedDone: false, likedTotal: null, plTracks: {} });
-  closeDrawer(); setNP('off'); setTint(null);
-}
-async function api(path, opt = {}, retry = true) {
-  const t = await token(); if (!t) throw Object.assign(new Error('not connected'), { status: 401 });
-  const r = await fetch(path.startsWith('http') ? path : 'https://api.spotify.com/v1' + path, {
-    ...opt, headers: { Authorization: 'Bearer ' + t, ...(opt.body ? { 'Content-Type': 'application/json' } : {}) }
-  });
-  if (r.status === 401 && retry) { await refresh(); return api(path, opt, false); }
-  if (r.status === 429) { await sleep((+r.headers.get('Retry-After') || 2) * 1000); return api(path, opt, retry); }
-  const txt = await r.text();
-  if (!r.ok) { let body = null; try { body = JSON.parse(txt); } catch {} throw Object.assign(new Error('spotify ' + r.status), { status: r.status, body }); }
-  return txt ? JSON.parse(txt) : null;
-}
-function fail(e) {
-  if (e.status === 403) toast('Spotify refused that request. Make sure your account is listed under User management for your app, and that Premium is active.', 7000);
-  else if (e.status === 401) toast('Spotify session expired. Connect again.');
-  else toast(`Spotify request failed (${e.status || 'network'}).`);
-}
-
-/* ═══════════════ Spotify: now-playing bar & player ═══════════════ */
-const np = $('#np');
-let cur = { uri: '', paused: true }, prog = { pos: 0, at: 0, dur: 0, paused: true };
-const setNP = s => { np.dataset.state = s; };
-function pickImg(imgs, want = 160) {
-  if (!imgs || !imgs.length) return '';
-  const w = imgs.filter(i => i.width);
-  if (!w.length) return imgs[imgs.length - 1].url;
-  const big = w.filter(i => i.width >= want).sort((a, b) => a.width - b.width);
-  return (big[0] || w.sort((a, b) => b.width - a.width)[0]).url;
+const isPaused = () => music.src === 'local' ? aud.paused : music.src === 'spotify' ? sp.paused : true;
+function syncPlayIcon() { $('#npPlay').innerHTML = isPaused() ? ICON.play : ICON.pause; }
+function updateProg() {
+  let p = 0;
+  if (music.src === 'local') p = aud.duration > 0 && isFinite(aud.duration) ? aud.currentTime / aud.duration : 0;
+  else if (music.src === 'spotify' && sp.dur) p = Math.min(1, (sp.pos + (sp.paused ? 0 : performance.now() - sp.at)) / sp.dur);
+  $('#progFill').style.transform = `scaleX(${p})`;
 }
 function setTint(c) {
   const r = document.documentElement;
@@ -808,212 +767,310 @@ function tintFrom(url) {
   im.onerror = () => setTint(null);
   im.src = url;
 }
-function onState(s) {
-  if (!s || !s.track_window.current_track) { cur = { uri: '', paused: true }; prog.dur = 0; setNP('idle'); setTint(null); markPlaying(); return; }
-  const t = s.track_window.current_track;
-  if (t.uri !== cur.uri) {
-    $('#npTitle').textContent = t.name;
-    $('#npArtist').textContent = t.artists.map(a => a.name).join(', ');
-    const im = $('#npImg'); im.src = pickImg(t.album.images, 128); im.alt = t.album.name;
-    tintFrom(pickImg(t.album.images, 64));
-  }
-  cur = { uri: t.uri, paused: s.paused };
-  prog = { pos: s.position, at: performance.now(), dur: s.duration, paused: s.paused };
-  $('#npPlay').innerHTML = s.paused ? ICON.play : ICON.pause;
-  setNP('playing'); updateProg(); markPlaying();
-}
-function updateProg() {
-  if (!prog.dur) return;
-  const p = Math.min(1, (prog.pos + (prog.paused ? 0 : performance.now() - prog.at)) / prog.dur);
-  $('#progFill').style.transform = `scaleX(${p})`;
-}
-function loadSDK() {
-  return new Promise((res, rej) => {
-    if (window.Spotify) return res();
-    window.onSpotifyWebPlaybackSDKReady = res;
-    const s = document.createElement('script'); s.src = 'https://sdk.scdn.co/spotify-player.js'; s.onerror = () => rej(new Error('sdk'));
-    document.head.appendChild(s);
-  });
-}
-async function initPlayer() {
-  try { await loadSDK(); } catch { toast('Couldn’t load Spotify’s player. Check your connection.'); return; }
-  player = new Spotify.Player({ name: 'Still', getOAuthToken: async cb => cb(await token()), volume: store.get('still.vol', .6) });
-  player.addListener('ready', ({ device_id }) => { deviceId = device_id; });
-  player.addListener('not_ready', () => { deviceId = null; });
-  player.addListener('player_state_changed', onState);
-  player.addListener('account_error', () => toast('Playing music here needs Spotify Premium.', 7000));
-  player.addListener('authentication_error', () => toast('Spotify sign-in expired. Connect again.'));
-  player.addListener('initialization_error', ({ message }) => toast('Player error: ' + message));
-  player.addListener('playback_error', ({ message }) => toast('Playback error: ' + message));
-  player.connect();
-}
-async function waitDevice() { for (let i = 0; i < 40 && !deviceId; i++) await sleep(200); return deviceId; }
-async function playContext({ context, uris, offsetUri }) {
-  try { player?.activateElement?.(); } catch {}
-  if (!deviceId) toast('Waking the player…', 2500);
-  if (!(await waitDevice())) { toast('The player isn’t ready. Premium is required to play here.'); return false; }
-  const body = context ? { context_uri: context, ...(offsetUri ? { offset: { uri: offsetUri } } : {}) } : { uris };
-  try { await api('/me/player/play?device_id=' + deviceId, { method: 'PUT', body: JSON.stringify(body) }); return true; }
-  catch (e) { fail(e); return false; }
-}
-$('#npPlay').onclick = () => player?.togglePlay();
-$('#npPrev').onclick = () => player?.previousTrack();
-$('#npNext').onclick = () => player?.nextTrack();
-$('#vol').value = store.get('still.vol', .6) * 100;
-$('#vol').oninput = e => { const v = e.target.value / 100; store.set('still.vol', v); player?.setVolume(v); };
-$('#prog').addEventListener('click', e => { if (!prog.dur) return; const r = e.currentTarget.getBoundingClientRect(); player?.seek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * prog.dur); });
-$('#npConnect').onclick = () => SP.cid && canAuth ? beginAuth() : openConnect();
-[$('#npOpen'), $('#npLib'), $('#npCover')].forEach(b => b.onclick = openDrawer);
-
-/* ═══════════════ Spotify: library drawer ═══════════════ */
-const drawer = $('#drawer'), dList = $('#dList'), dScroll = $('#dScroll'), dSearch = $('#dSearch'), dSentinel = $('#dSentinel');
-const lib = { loaded: false, busy: false, pl: [], liked: [], likedNext: '/me/tracks?limit=50', likedDone: false, likedTotal: null, busyLiked: false, plTracks: {} };
-const view = { mode: 'playlists', pl: null, q: '', limit: 120, rendered: 0, msg: '' };
-let drawerOpen = false;
-
-const norm = t => ({ id: t.id, uri: t.uri, name: t.name, artists: (t.artists || []).map(a => a.name).join(', '), img: pickImg(t.album?.images, 96), dur: t.duration_ms });
-const normPl = p => {
-  const n = p.items?.total ?? p.tracks?.total, own = !!me && p.owner?.id === me.id;
-  return { id: p.id, uri: p.uri, name: p.name || 'Untitled', img: pickImg(p.images, 96), own,
-    sub: [own ? '' : (p.owner?.display_name ? 'by ' + p.owner.display_name : ''), n != null ? n + ' songs' : ''].filter(Boolean).join(', ') || 'Playlist' };
+$('#npPlay').onclick = () => {
+  if (music.src === 'local') { aud.paused ? aud.play().catch(() => {}) : aud.pause(); }
+  else if (music.src === 'spotify') { try { sp.ctrl.togglePlay(); } catch {} }
 };
-const EQ = '<span class="eq"><s></s><s></s><s></s></span>';
-const plRow = p => `<div class="row" role="button" tabindex="0" data-act="openpl" data-id="${esc(p.id)}"><img class="th" loading="lazy" alt="" src="${esc(p.img)}"><span class="rt"><b>${esc(p.name)}</b><i>${esc(p.sub)}</i></span><button class="rplay" data-act="playpl" data-id="${esc(p.id)}" aria-label="Play ${esc(p.name)}">${ICON.play}</button></div>`;
-const trRow = (t, i) => { const on = t.uri === cur.uri; return `<div class="row${on ? ' on' : ''}" role="button" tabindex="0" data-act="track" data-i="${i}" data-uri="${esc(t.uri)}"><img class="th" loading="lazy" alt="" src="${esc(t.img)}"><span class="rt"><b>${esc(t.name)}</b><i>${esc(t.artists)}</i></span><span class="dur">${on ? EQ.replace('class="eq"', 'class="eq' + (cur.paused ? '' : ' live') + '"') : fmt(t.dur)}</span></div>`; };
+$('#npPrev').onclick = () => prevLocal();
+$('#npNext').onclick = () => nextLocal();
+$('#npTray').onclick = () => { trayMode = (trayMode + 1) % 3; tray.classList.toggle('open', trayMode > 0); tray.classList.toggle('tall', trayMode === 2); };
+$('#vol').value = aud.volume * 100;
+$('#vol').oninput = e => { aud.volume = e.target.value / 100; store.set('still.vol', aud.volume); };
+$('#prog').addEventListener('click', e => {
+  const r = e.currentTarget.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  if (music.src === 'local' && aud.duration > 0) aud.currentTime = f * aud.duration;
+  else if (music.src === 'spotify' && sp.dur) { try { sp.ctrl.seek(f * sp.dur / 1000); } catch {} }
+});
+[$('#npAdd'), $('#npLib'), $('#npCover')].forEach(b => b.onclick = () => openDrawer());
 
-function currentItems() {
-  const q = view.q.trim().toLowerCase();
-  const src = view.mode === 'playlists' ? lib.pl : view.mode === 'liked' ? lib.liked : (lib.plTracks[view.pl?.id] || []);
-  if (!q) return src;
-  return src.filter(x => (view.mode === 'playlists' ? x.name : x.name + ' ' + x.artists).toLowerCase().includes(q));
+/* — local files — */
+const cleanName = fn => fn.replace(AUDIO_EXT, '').replace(/_+/g, ' ').replace(/^\s*\d{1,3}\s*[-._)]\s*/, '').trim() || fn;
+const fileTrack = f => ({ name: cleanName(f.name), file: f, path: f.webkitRelativePath || f.name });
+const dirOf = p => { const a = p.split('/'); return a.length > 1 ? a[a.length - 2] : ''; };
+const isAudio = f => AUDIO_EXT.test(f.name) || (f.type || '').startsWith('audio/');
+function refillBag() {
+  const a = []; for (let i = 0; i < L.tracks.length; i++) if (i !== L.idx) a.push(i);
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  L.bag = a;
 }
-function setMsg(t) { $('#dMsg').textContent = t || ''; }
-function renderRows(reset) {
-  const items = currentItems();
-  if (reset) { dList.innerHTML = ''; view.rendered = 0; view.limit = 120; dScroll.scrollTop = 0; }
-  const end = Math.min(items.length, view.limit), out = [];
-  for (let i = view.rendered; i < end; i++) out.push(view.mode === 'playlists' ? plRow(items[i]) : trRow(items[i], i));
-  dList.insertAdjacentHTML('beforeend', out.join('')); view.rendered = end;
-  if (items.length) return setMsg('');
-  if (lib.busy || (view.mode === 'liked' && lib.busyLiked)) return setMsg('Loading…');
-  if (view.q) return setMsg(`Nothing matches “${view.q}”.`);
-  setMsg(view.mode === 'playlists' ? 'No playlists yet.' : view.mode === 'liked' ? (lib.likedDone ? 'No liked songs yet.' : '') : (view.msg || 'No songs to show.'));
+function nextLocal(auto) {
+  const n = L.tracks.length; if (!n) return;
+  if (L.shuffle) {
+    if (!L.bag.length) { if (auto && !L.repeat) return syncPlayIcon(); refillBag(); }
+    return playLocal(L.bag.length ? L.bag.pop() : L.idx);
+  }
+  let i = L.idx + 1;
+  if (i >= n) { if (auto && !L.repeat) return syncPlayIcon(); i = 0; }
+  playLocal(i);
 }
-async function more() {
-  if (more.busy) return; more.busy = true;
-  try {
-    const items = currentItems();
-    if (view.rendered < items.length) { view.limit = view.rendered + 120; renderRows(false); }
-    else if (view.mode === 'liked' && !lib.likedDone && !view.q && drawerOpen) { await fetchLiked(); view.limit = view.rendered + 120; renderRows(false); }
-  } finally { more.busy = false; io.unobserve(dSentinel); io.observe(dSentinel); }
+function prevLocal() {
+  if (aud.currentTime > 3) { aud.currentTime = 0; return; }
+  const n = L.tracks.length; if (!n) return;
+  const p = L.hist.pop();
+  if (p !== undefined) playLocal(p, true); else playLocal((L.idx - 1 + n) % n, true);
 }
-const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more(); }, { root: dScroll, rootMargin: '300px' });
-io.observe(dSentinel);
+function loadTagLib() {
+  return tagLib || (tagLib = new Promise((res, rej) => {
+    if (window.jsmediatags) return res(window.jsmediatags);
+    const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js';
+    s.onload = () => res(window.jsmediatags); s.onerror = () => rej(new Error('tags')); document.head.appendChild(s);
+  }));
+}
+async function readTags(file) {
+  try { const jm = await loadTagLib(); return await new Promise((res, rej) => jm.read(file, { onSuccess: res, onError: rej })); }
+  catch { return null; }
+}
+function setMedia(t) {
+  if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+  try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title || t.name, artist: t.artist || '', album: t.album || '', artwork: t.img ? [{ src: t.img }] : [] }); } catch {}
+}
+function applyTags(t, tg, i) {
+  const g = tg.tags || {};
+  if (g.title) t.title = g.title; if (g.artist) t.artist = g.artist; if (g.album) t.album = g.album;
+  if (g.picture && g.picture.data) { try { t.img = URL.createObjectURL(new Blob([new Uint8Array(g.picture.data)], { type: g.picture.format || 'image/jpeg' })); } catch {} }
+  if (L.idx === i && music.src === 'local') { showMeta(t.title || t.name, t.artist || t.dir || '', t.img || ''); t.img ? tintFrom(t.img) : setTint(null); setMedia(t); }
+  const row = $(`#fList .row[data-i="${i}"]`); if (row) row.outerHTML = fRow(i);
+}
+function skipBad(t) {
+  L.errs++;
+  if (L.errs > 5) { toast('Couldn’t play these files. Your browser may not support the format.', 6000); return; }
+  toast(`Can’t play “${t.name}”. Skipping.`); nextLocal(true);
+}
+async function playLocal(i, fromPrev) {
+  const t = L.tracks[i]; if (!t) return;
+  pauseSpotify();
+  if (!fromPrev && L.idx >= 0 && L.idx !== i) { L.hist.push(L.idx); if (L.hist.length > 200) L.hist.shift(); }
+  L.idx = i; L.bag = L.bag.filter(x => x !== i);
+  let file; try { file = t.file || await t.handle.getFile(); } catch { return skipBad(t); }
+  if (L.idx !== i) return;
+  if (L.url) URL.revokeObjectURL(L.url);
+  L.url = URL.createObjectURL(file); aud.src = L.url;
+  setSrc('local'); showMeta(t.title || t.name, t.artist || t.dir || '', t.img || ''); t.img ? tintFrom(t.img) : setTint(null);
+  setMedia(t); markRows();
+  aud.play().catch(e => { if (e.name === 'NotAllowedError') toast('Press play to start the music.'); });
+  if (!t.tagged) { t.tagged = true; const tg = await readTags(file); if (tg) applyTags(t, tg, i); }
+}
+function pauseLocal() { try { aud.pause(); } catch {} }
+aud.addEventListener('playing', () => { L.errs = 0; syncPlayIcon(); markRows(); });
+aud.addEventListener('play', syncPlayIcon);
+aud.addEventListener('pause', () => { syncPlayIcon(); markRows(); });
+aud.addEventListener('ended', () => nextLocal(true));
+aud.addEventListener('error', () => { if (music.src === 'local' && aud.getAttribute('src')) skipBad(L.tracks[L.idx] || { name: 'this file' }); });
+if ('mediaSession' in navigator) {
+  const h = (a, f) => { try { navigator.mediaSession.setActionHandler(a, f); } catch {} };
+  h('play', () => aud.play()); h('pause', () => aud.pause()); h('previoustrack', prevLocal); h('nexttrack', () => nextLocal());
+  h('seekto', d => { if (d.seekTime != null) aud.currentTime = d.seekTime; });
+}
 
-async function fetchLiked() {
-  if (lib.likedDone || lib.busyLiked) return;
-  lib.busyLiked = true;
-  try {
-    const j = await api(lib.likedNext);
-    for (const it of j.items || []) { const t = it.track || it.item; if (t && t.type === 'track' && !t.is_local) lib.liked.push(norm(t)); }
-    if (j.next) lib.likedNext = j.next; else lib.likedDone = true;
-    if (j.total != null) { lib.likedTotal = j.total; $('#tabLiked').textContent = `Liked songs (${j.total})`; }
-  } catch (e) { fail(e); lib.likedDone = true; }
-  finally { lib.busyLiked = false; }
-}
-async function loadAllLiked() { while (!lib.likedDone) await fetchLiked(); }
-async function initLibrary() {
-  if (lib.loaded || lib.busy) return;
-  lib.busy = true; setMsg('Loading your library…');
-  try {
-    let url = '/me/playlists?limit=50';
-    while (url) { const j = await api(url); for (const p of j.items || []) if (p) lib.pl.push(normPl(p)); url = j.next; }
-    lib.loaded = true;
-  } catch (e) { fail(e); }
-  lib.busy = false; renderRows(true);
-  fetchLiked();
-}
-async function loadPlTracks(id) {
-  let url = `/playlists/${id}/items?limit=100`, fell = false; const out = [];
-  while (url) {
-    let j;
-    try { j = await api(url); }
-    catch (e) { if (!fell && (e.status === 404 || e.status === 400) && url.includes('/items')) { fell = true; url = `/playlists/${id}/tracks?limit=100`; continue; } throw e; }
-    const arr = Array.isArray(j.items) ? j.items : (j.items?.items || []);
-    for (const it of arr) { const t = it.item || it.track; if (t && t.type === 'track' && !t.is_local) out.push(norm(t)); }
-    url = j.next;
+const fList = $('#fList'), fSent = $('#fSent');
+const fRow = i => {
+  const t = L.tracks[i], on = i === L.idx && music.src === 'local';
+  return `<div class="row${on ? ' on' : ''}" role="button" tabindex="0" data-i="${i}">${thumb(t.img)}<span class="rt"><b>${esc(t.title || t.name)}</b><i>${esc(t.artist || t.dir || '')}</i></span><span class="dur">${on ? eqHtml() : ''}</span></div>`;
+};
+function fIdx() {
+  const q = L.q.trim().toLowerCase(), out = [];
+  for (let i = 0; i < L.tracks.length; i++) {
+    const t = L.tracks[i];
+    if (!q || ((t.title || t.name) + ' ' + (t.artist || '') + ' ' + t.path).toLowerCase().includes(q)) out.push(i);
   }
   return out;
 }
-function syncChrome() {
-  const detail = view.mode === 'detail';
-  $('#dBack').hidden = !detail; $('#dPlayAll').hidden = !detail; $('#dTabs').hidden = detail;
-  $('#dTitle').textContent = detail ? view.pl.name : 'Your library';
-  dSearch.placeholder = detail ? 'Search this playlist' : view.mode === 'liked' ? 'Search liked songs' : 'Search playlists';
-  $$('#dTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === view.mode));
+function renderFiles(reset) {
+  const idx = fIdx();
+  if (reset) { fList.innerHTML = ''; L.rendered = 0; L.limit = 200; }
+  const end = Math.min(idx.length, L.limit), out = [];
+  for (let k = L.rendered; k < end; k++) out.push(fRow(idx[k]));
+  fList.insertAdjacentHTML('beforeend', out.join('')); L.rendered = end;
+  const has = L.tracks.length > 0;
+  $('#fTools').hidden = !has; $('#drop').classList.toggle('has', has);
+  $('#fCount').hidden = !has; $('#fCount').textContent = has ? `${L.tracks.length} song${L.tracks.length === 1 ? '' : 's'} from ${L.source}.` : '';
+  $('#fMsg').textContent = has && !idx.length ? `Nothing matches “${L.q}”.` : '';
 }
-async function openPlaylist(id) {
-  const p = lib.pl.find(x => x.id === id); if (!p) return;
-  Object.assign(view, { mode: 'detail', pl: p, q: '', msg: '' }); dSearch.value = ''; syncChrome();
-  if (!lib.plTracks[id]) {
-    setMsg('Loading songs…'); dList.innerHTML = '';
-    try { lib.plTracks[id] = await loadPlTracks(id); }
-    catch (e) { lib.plTracks[id] = []; view.msg = 'Couldn’t load the songs in this playlist.'; }
-    if (!lib.plTracks[id].length && !p.own) view.msg = 'Spotify only shares song lists for playlists you own or collaborate on. You can still play this playlist as a whole.';
-  }
-  if (view.mode === 'detail' && view.pl.id === id) renderRows(true);
-}
-async function setTab(tab) {
-  Object.assign(view, { mode: tab, pl: null, q: '' }); dSearch.value = ''; syncChrome();
-  if (tab === 'liked' && !lib.liked.length && !lib.likedDone) { renderRows(true); await fetchLiked(); }
-  if (view.mode === tab) renderRows(true);
-}
-$$('#dTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
-$('#dBack').onclick = () => setTab('playlists');
-$('#dPlayAll').onclick = async () => { if (view.pl && await playContext({ context: view.pl.uri })) closeDrawer(300); };
-let sT;
-dSearch.addEventListener('input', () => {
-  clearTimeout(sT);
-  sT = setTimeout(async () => {
-    view.q = dSearch.value; renderRows(true);
-    if (view.q && view.mode === 'liked' && !lib.likedDone) { setMsg('Searching all your liked songs…'); await loadAllLiked(); if (view.q === dSearch.value) renderRows(true); }
-  }, 200);
-});
-async function rowAct(el) {
-  const act = el.dataset.act;
-  if (act === 'openpl') return openPlaylist(el.dataset.id);
-  if (act === 'playpl') { const p = lib.pl.find(x => x.id === el.dataset.id); if (p && await playContext({ context: p.uri })) closeDrawer(300); return; }
-  if (act === 'track') {
-    const items = currentItems(), i = +el.dataset.i, t = items[i]; if (!t) return;
-    const ok = view.mode === 'detail'
-      ? await playContext({ context: view.pl.uri, offsetUri: t.uri })
-      : await playContext({ uris: items.slice(i, i + 100).map(x => x.uri) });
-    if (ok) closeDrawer(300);
-  }
-}
-dList.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el) rowAct(el); });
-dList.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.row')) { e.preventDefault(); rowAct(e.target); } });
-function markPlaying() {
-  $$('.row[data-uri]', dList).forEach(r => {
-    const on = r.dataset.uri === cur.uri;
+function markRows() {
+  $$('#fList .row').forEach(r => {
+    const on = +r.dataset.i === L.idx && music.src === 'local';
     r.classList.toggle('on', on);
-    const d = r.querySelector('.dur'); if (!d) return;
-    const i = +r.dataset.i, t = currentItems()[i];
-    if (t) d.innerHTML = on ? EQ.replace('class="eq"', 'class="eq' + (cur.paused ? '' : ' live') + '"') : fmt(t.dur);
+    const d = r.querySelector('.dur'); if (d) d.innerHTML = on ? eqHtml() : '';
   });
 }
-function openDrawer() {
-  if (!SP.tok) return SP.cid && canAuth ? beginAuth() : openConnect();
+const ioF = new IntersectionObserver(es => {
+  if (!es.some(e => e.isIntersecting)) return;
+  if (L.rendered < fIdx().length) { L.limit = L.rendered + 200; renderFiles(false); ioF.unobserve(fSent); ioF.observe(fSent); }
+}, { root: dScroll, rootMargin: '300px' });
+ioF.observe(fSent);
+function syncToggles() { $('#btnShuffle').setAttribute('aria-pressed', L.shuffle); $('#btnRepeat').setAttribute('aria-pressed', L.repeat); }
+$('#btnShuffle').onclick = () => { L.shuffle = !L.shuffle; store.set('still.shuffle', L.shuffle); L.bag = []; if (L.shuffle && L.tracks.length) refillBag(); syncToggles(); };
+$('#btnRepeat').onclick = () => { L.repeat = !L.repeat; store.set('still.repeat', L.repeat); syncToggles(); };
+$('#btnClear').onclick = () => {
+  L.tracks.forEach(t => { if (t.img) URL.revokeObjectURL(t.img); });
+  L.tracks = []; L.idx = -1; L.hist = []; L.bag = []; L.q = ''; $('#fSearch').value = '';
+  if (music.src === 'local') { pauseLocal(); aud.removeAttribute('src'); setSrc(null); setTint(null); }
+  renderFiles(true);
+};
+let sT; $('#fSearch').addEventListener('input', () => { clearTimeout(sT); sT = setTimeout(() => { L.q = $('#fSearch').value; renderFiles(true); }, 150); });
+fList.addEventListener('click', e => { const r = e.target.closest('.row[data-i]'); if (r) { playLocal(+r.dataset.i); closeDrawer(300); } });
+fList.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.row')) { e.preventDefault(); e.target.click(); } });
+
+function setTracks(found, label) {
+  found.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+  found.forEach(t => { t.dir = dirOf(t.path); });
+  L.tracks.forEach(t => { if (t.img) URL.revokeObjectURL(t.img); });
+  Object.assign(L, { tracks: found, idx: -1, hist: [], bag: [], q: '', source: label }); $('#fSearch').value = '';
+  setTab('files'); renderFiles(true);
+  if (L.shuffle) { refillBag(); playLocal(L.bag.pop()); } else playLocal(0);
+}
+async function walk(dir, path, out, depth = 0) {
+  if (depth > 8 || out.length > 6000) return;
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === 'file') { if (AUDIO_EXT.test(name)) out.push({ name: cleanName(name), handle: h, path: path + name }); }
+    else if (!name.startsWith('.')) await walk(h, path + name + '/', out, depth + 1);
+  }
+}
+const idb = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open('still', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k) { const db = await this.open(); return new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async set(k, v) { const db = await this.open(); return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+};
+async function useDirHandle(h, save) {
+  $('#fMsg').textContent = 'Reading folder…';
+  const found = []; await walk(h, '', found); $('#fMsg').textContent = '';
+  if (!found.length) { toast('No songs found in that folder.'); return; }
+  if (save) { try { await idb.set('musicDir', h); savedDir = h; showReopen(); } catch {} }
+  setTracks(found, `“${h.name}”`);
+}
+function showReopen() { const b = $('#reopen'); if (savedDir) { b.hidden = false; b.textContent = `Reopen “${savedDir.name}”`; } }
+$('#pickFiles').onclick = () => $('#fileIn').click();
+$('#pickDir').onclick = async () => {
+  if (window.showDirectoryPicker) {
+    try { await useDirHandle(await showDirectoryPicker({ id: 'still-music', mode: 'read', startIn: 'music' }), true); }
+    catch (e) { if (e.name !== 'AbortError') toast('Couldn’t open that folder.'); }
+  } else $('#dirIn').click();
+};
+$('#reopen').onclick = async () => {
+  try {
+    if ((await savedDir.requestPermission({ mode: 'read' })) !== 'granted') return toast('Permission to read that folder was declined.');
+    await useDirHandle(savedDir, false);
+  } catch { toast('Couldn’t reopen that folder. Choose it again.'); }
+};
+[['#fileIn', 'these songs'], ['#dirIn', 'your folder']].forEach(([sel, label]) => $(sel).addEventListener('change', e => {
+  const fs = [...e.target.files].filter(isAudio); e.target.value = '';
+  if (!fs.length) return toast('No songs found there.');
+  setTracks(fs.map(fileTrack), label);
+}));
+async function handleDrop(dt) {
+  const files = [...dt.files];
+  const ps = [...dt.items].filter(i => i.kind === 'file').map(i => i.getAsFileSystemHandle ? i.getAsFileSystemHandle().catch(() => null) : Promise.resolve(null));
+  const hs = await Promise.all(ps), found = [];
+  if (hs.some(Boolean)) {
+    for (const h of hs) {
+      if (!h) continue;
+      if (h.kind === 'directory') await walk(h, h.name + '/', found);
+      else if (AUDIO_EXT.test(h.name)) found.push({ name: cleanName(h.name), handle: h, path: h.name });
+    }
+  } else files.forEach(f => { if (isAudio(f)) found.push(fileTrack(f)); });
+  if (!found.length) return toast('No songs found in what you dropped. To add a folder, use Choose folder.', 6000);
+  setTracks(found, 'what you dropped'); openDrawer('files');
+}
+let dragN = 0; const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+addEventListener('dragenter', e => { if (hasFiles(e)) { dragN++; document.body.classList.add('dragging'); } });
+addEventListener('dragleave', e => { if (hasFiles(e)) { dragN = Math.max(0, dragN - 1); if (!dragN) document.body.classList.remove('dragging'); } });
+addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragN = 0; document.body.classList.remove('dragging'); handleDrop(e.dataTransfer); });
+
+/* — Spotify link (official embed player, no login needed) — */
+let recent = store.get('still.recent', []);
+function parseSpotify(str) {
+  str = String(str).trim();
+  let m = str.match(/^spotify:(track|album|playlist|artist|episode|show):([A-Za-z0-9]+)$/i);
+  if (!m) m = str.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:user\/[^/]+\/)?(?:embed\/)?(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]+)/i);
+  return m ? { type: m[1].toLowerCase(), id: m[2] } : null;
+}
+function spApi() {
+  return sp.api || (sp.api = new Promise((res, rej) => {
+    if (window.__spApi) return res(window.__spApi);
+    window.onSpotifyIframeApiReady = api => { window.__spApi = api; res(api); };
+    const s = document.createElement('script'); s.src = 'https://open.spotify.com/embed/iframe-api/v1'; s.async = true;
+    s.onerror = () => { sp.api = null; rej(new Error('api')); };
+    document.head.appendChild(s);
+  }));
+}
+function onSpReady() { if (sp.pending) { sp.pending = false; try { sp.ctrl.play(); } catch {} } }
+function onSpUpdate(e) {
+  const d = (e && e.data) || {};
+  sp.paused = !!d.isPaused; sp.pos = d.position || 0; sp.dur = d.duration || 0; sp.at = performance.now(); sp.pending = false;
+  if (music.src === 'spotify') syncPlayIcon();
+}
+function pauseSpotify() { if (sp.ctrl) { try { sp.ctrl.pause(); } catch {} } sp.paused = true; }
+async function playSpotify(link) {
+  const uri = `spotify:${link.type}:${link.id}`;
+  let api; try { api = await spApi(); } catch { toast('Couldn’t reach Spotify. Check your connection.'); return false; }
+  pauseLocal();
+  setSrc('spotify'); showMeta('Loading…', SP_TYPES[link.type], ''); setTint(null);
+  Object.assign(sp, { uri, pending: true, paused: true, pos: 0, dur: 0 });
+  if (!sp.ctrl) {
+    await new Promise(res => api.createController($('#embedHost'), { width: '100%', height: '100%', uri }, ctrl => {
+      sp.ctrl = ctrl; ctrl.addListener('ready', onSpReady); ctrl.addListener('playback_update', onSpUpdate); res();
+    }));
+  } else sp.ctrl.loadUri(uri);
+  spMeta(link);
+  setTimeout(() => { if (sp.pending && sp.uri === uri) { try { sp.ctrl.play(); } catch {} } }, 1500);
+  setTimeout(() => { if (music.src === 'spotify' && sp.uri === uri && sp.paused) { trayMode = 1; tray.classList.add('open'); toast('Press play in the Spotify player to start.', 6000); } }, 4500);
+  return true;
+}
+async function spMeta(link) {
+  const uri = `spotify:${link.type}:${link.id}`; let title = 'Spotify ' + SP_TYPES[link.type].toLowerCase(), img = '';
+  try {
+    const r = await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(`https://open.spotify.com/${link.type}/${link.id}`));
+    if (r.ok) { const j = await r.json(); title = j.title || title; img = j.thumbnail_url || ''; }
+  } catch {}
+  addRecent({ type: link.type, id: link.id, title, img });
+  if (sp.uri !== uri || music.src !== 'spotify') return;
+  showMeta(title, SP_TYPES[link.type], img); tintFrom(img);
+}
+function addRecent(r) { recent = [r, ...recent.filter(x => !(x.type === r.type && x.id === r.id))].slice(0, 12); store.set('still.recent', recent); renderRecent(); }
+function renderRecent() {
+  $('#recentHead').hidden = !recent.length;
+  $('#recent').innerHTML = recent.map(r => `<div class="row" role="button" tabindex="0" data-act="play" data-k="${esc(r.type + ':' + r.id)}">${thumb(r.img)}<span class="rt"><b>${esc(r.title)}</b><i>${esc(SP_TYPES[r.type] || '')}</i></span><button class="rm" data-act="rm" data-k="${esc(r.type + ':' + r.id)}" aria-label="Remove from recent">${ICON.close}</button></div>`).join('');
+}
+$('#recent').addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const [type, id] = el.dataset.k.split(':');
+  if (el.dataset.act === 'rm') { recent = recent.filter(x => !(x.type === type && x.id === id)); store.set('still.recent', recent); renderRecent(); }
+  else if (await playSpotify({ type, id })) closeDrawer(400);
+});
+$('#recent').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.row')) { e.preventDefault(); e.target.click(); } });
+$('#spForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const raw = $('#spLink').value.trim(); if (!raw) return;
+  const link = parseSpotify(raw);
+  if (!link) return toast(/spotify\.link|spotify\.app\.link/i.test(raw) ? 'That’s a short link. Open it, then copy the address from your browser (open.spotify.com/…).' : 'That doesn’t look like a Spotify link. In Spotify use Share, then Copy link.', 6500);
+  if (await playSpotify(link)) { $('#spLink').value = ''; closeDrawer(400); }
+});
+$('#spLink').addEventListener('paste', () => setTimeout(() => { if (parseSpotify($('#spLink').value)) $('#spForm').requestSubmit(); }, 0));
+
+/* — panel — */
+function setTab(t) {
+  store.set('still.tab', t);
+  $('#paneSp').hidden = t !== 'spotify'; $('#paneFiles').hidden = t !== 'files';
+  $$('#dTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+}
+$$('#dTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+function openDrawer(tab) {
+  if (tab) setTab(tab); else if (music.src === 'local') setTab('files');
   drawerOpen = true; drawer.inert = false; drawer.classList.add('open'); $('#scrim').classList.add('on');
-  document.body.classList.remove('idle'); syncChrome();
-  if (!lib.loaded) initLibrary(); else renderRows(true);
-  setTimeout(() => $('#dClose').focus({ preventScroll: true }), 300);
+  document.body.classList.remove('idle');
+  setTimeout(() => { if (drawerOpen) $('#dClose').focus({ preventScroll: true }); }, 320);
 }
 function closeDrawer(delay = 0) {
   setTimeout(() => { drawerOpen = false; drawer.classList.remove('open'); drawer.inert = true; $('#scrim').classList.remove('on'); }, delay);
 }
 $('#dClose').onclick = () => closeDrawer();
 $('#scrim').onclick = () => closeDrawer();
+
+async function bootMusic() {
+  syncToggles(); renderRecent(); renderFiles(true); setTab(store.get('still.tab', 'spotify'));
+  try { const h = await idb.get('musicDir'); if (h && h.kind === 'directory') { savedDir = h; showReopen(); } } catch {}
+}
 
 /* ═══════════════ calm mode: chrome fades when you're not touching anything ═══════════════ */
 let idleT, lastMove = 0;
@@ -1038,14 +1095,6 @@ addEventListener('keydown', e => {
 });
 
 /* ═══════════════ boot ═══════════════ */
-async function bootSpotify() {
-  await handleRedirect();
-  if (!SP.tok) { setNP('off'); return; }
-  try { me = await api('/me'); } catch (e) { if (e.status !== 401) fail(e); if (!SP.tok) return; }
-  setNP('idle');
-  if (me && me.product && me.product !== 'premium') toast('Your Spotify account isn’t Premium, so music can’t play inside this page.', 7000);
-  initPlayer();
-}
 setTheme(theme); setFormat(ui.h24);
 $('#btnFs').innerHTML = ICON.expand;
 applyPhase(); renderPomo(true); renderClock();
@@ -1056,7 +1105,7 @@ setInterval(() => {
 }, 200);
 keepAwake();
 wake();
-bootSpotify();
+bootMusic();
 </script>
 </body>
 </html>
